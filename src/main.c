@@ -44,7 +44,7 @@ static int usage(void) {
           "                                         result files in a folder\n"
           "  ojh footprint <game|your-game.json> [the tpm options] [--od-save FILE] [--freeciv-prefix DIR]\n"
           "                                         install size, save size, save time and load time\n"
-          "  ojh fps <game|your-game.json> [the tpm options] [--seconds S]\n"
+          "  ojh fps <game|your-game.json> [the tpm options] [--seconds S] [--od-game PATH --od-save FILE]\n"
           "                                         frame rate in the same scenes in every game\n"
           "  ojh net <game|your-game.json> [the tpm options] [--clients N] [--freeciv-client PATH] [--log FILE]\n"
           "                                         netcode on loopback: data per turn, information per minute, delivery\n"
@@ -438,7 +438,10 @@ static int cmd_fps(int argc, char **argv) {
         else if (strcmp(a, "--drivers") == 0) o.drivers_dir = v;
         else if (strcmp(a, "--work") == 0) o.work_dir = v;
         else if (strcmp(a, "--out") == 0) out_path = v;
-        else if (strcmp(a, "--od-server") == 0 || strcmp(a, "--od-data") == 0 || strcmp(a, "--freeciv-server") == 0) continue;
+        else if (strcmp(a, "--od-game") == 0) o.od_game = v;
+        else if (strcmp(a, "--od-data") == 0) o.od_data = v;
+        else if (strcmp(a, "--od-save") == 0) o.od_save = v;
+        else if (strcmp(a, "--od-server") == 0 || strcmp(a, "--freeciv-server") == 0) continue;
         else {
             fprintf(stderr, "fps: unknown option %s\n", a);
             return 2;

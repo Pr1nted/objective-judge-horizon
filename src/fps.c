@@ -164,10 +164,19 @@ int ojh_fps_run(ojh_game game, const ojh_tpm_options *o, double seconds, ojh_fps
                      "not measured: Freeciv's client redraws only when something on the map changes, so it has no steady "
                      "frame rate to time");
             return fail(error, error_len, out->how);
-        default:
+        default: {
+            if (!o->od_game || !o->od_data) return fail(error, error_len, "needs --od-game and --od-data");
+            char save[4400];
+            if (o->od_save) snprintf(save, sizeof save, "%s", o->od_save);
+            else snprintf(save, sizeof save, "%s/saves/Modern Day.odsv", o->od_data);
+            const char *argv[] = {o->od_game, "--ojh-fps", seconds_text, save, turns_text, NULL};
+            int status = run_scenes(argv, NULL, NULL, timeout, out, error, error_len);
             snprintf(out->how, sizeof out->how,
-                     "not measured: Open Doctrines has no way yet for OJH to time its frames scene by scene");
-            return fail(error, error_len, out->how);
+                     "Open Doctrines' own --ojh-fps mode: its real window with vsync and the frame cap off, every frame "
+                     "timed for %s s per scene after two seconds of settling, on the %.200s world; the late-game map comes "
+                     "after %d turns", seconds_text, save, o->turns);
+            return status;
+        }
     }
 }
 

@@ -35,6 +35,7 @@ typedef struct {
     const char *work_dir;
     const char *ojh_path;
     const char *od_save;
+    const char *od_game;
     const char *freeciv_prefix;
     int turns;
     unsigned seed;

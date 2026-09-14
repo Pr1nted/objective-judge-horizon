@@ -157,6 +157,9 @@ static int cmd_tpm(int argc, char **argv) {
     ojh_json_key(&w, "turns_requested"); ojh_json_int(&w, o.turns);
     ojh_json_key(&w, "seed"); ojh_json_uint(&w, o.seed);
     ojh_json_key(&w, "players_requested"); ojh_json_int(&w, o.players);
+    /* OJH sets the player count for Freeciv (aifill) and Unciv (civilizations); GD5's scenario
+       and Open Doctrines' generated world set their own. */
+    ojh_json_key(&w, "players_chosen"); ojh_json_bool(&w, game == OJH_GAME_FREECIV || game == OJH_GAME_UNCIV);
     ojh_json_end_object(&w);
     ojh_json_key(&w, "result"); ojh_tpm_json(&w, &result);
     ojh_json_key(&w, "error");
@@ -205,6 +208,7 @@ static int write_tpm_result(const char *path, const ojh_machine *m, const ojh_re
     ojh_json_key(&w, "turns_requested"); ojh_json_int(&w, turns_requested);
     ojh_json_key(&w, "seed"); ojh_json_uint(&w, 20260914u);
     ojh_json_key(&w, "players_requested"); ojh_json_int(&w, 8);
+    ojh_json_key(&w, "players_chosen"); ojh_json_bool(&w, t->game == OJH_GAME_FREECIV || t->game == OJH_GAME_UNCIV);
     ojh_json_end_object(&w);
     ojh_json_key(&w, "result"); ojh_tpm_json(&w, t);
     ojh_json_key(&w, "error"); ojh_json_null(&w);
@@ -296,7 +300,8 @@ static int test_report(void) {
     const char *md_needs[] = {"# Objective Judge Horizon (OJH) report", "| Apple M1 Pro |", "| Freeciv | 99 | 237.7 |",
                               "| Open Doctrines | 500 | 967.7 |", "| 2,592 tiles |", "0.060 → 0.420",
                               "The runs timed different numbers of turns (99 to 500)", "Player counts differ (8 to 37)",
-                              "n/a for TPM × regions", "**Freeciv**: gaps between"};
+                              "n/a for TPM × regions", "**Freeciv**: gaps between", "8 players, chosen by OJH",
+                              "players as the game's own scenario or world sets them"};
     const char *txt_needs[] = {"Objective Judge Horizon (OJH) report\n====", "Freeciv", "237.7", "967.7", "2,592 tiles",
                                "  - Freeciv: gaps between"};
     int failures = 0;
@@ -311,6 +316,12 @@ static int test_report(void) {
             fprintf(stderr, "report: report.txt is missing \"%s\"\n", txt_needs[i]);
             failures++;
         }
+    }
+    const char *od_line = strstr(md, "**Open Doctrines**");
+    const char *od_end = od_line ? strchr(od_line, '\n') : NULL;
+    if (od_line && od_end && strstr(od_line, "chosen by OJH") && strstr(od_line, "chosen by OJH") < od_end) {
+        fputs("report: Open Doctrines' line claims OJH chose its players\n", stderr);
+        failures++;
     }
     if (strstr(txt, "| Freeciv |") || strstr(txt, "**")) {
         fputs("report: report.txt has Markdown in it\n", stderr);

@@ -96,6 +96,24 @@ static void grouped(char *out, size_t n, double value) {
     snprintf(out, n, "%s", buf);
 }
 
+/* A decimal with thousands separators: 1111.84 -> "1,111.8". */
+static void grouped_decimal(char *out, size_t n, double value, int decimals) {
+    char whole[48];
+    double scale = 1;
+    for (int i = 0; i < decimals; i++) scale *= 10;
+    double rounded = (double)(long long)(value * scale + (value < 0 ? -0.5 : 0.5)) / scale;
+    long long integer = (long long)rounded;
+    grouped(whole, sizeof whole, (double)integer);
+    if (decimals <= 0) {
+        snprintf(out, n, "%s", whole);
+        return;
+    }
+    char fraction[32];
+    snprintf(fraction, sizeof fraction, "%.*f", decimals, rounded - (double)integer);
+    const char *dot = strchr(fraction, '.');
+    snprintf(out, n, "%s%s", whole, dot ? dot : "");
+}
+
 static void grouped_or_na(char *out, size_t n, const ojh_jvalue *v) {
     if (!number_present(v)) snprintf(out, n, "n/a");
     else grouped(out, n, v->number);
@@ -274,9 +292,10 @@ static void machine_section(out_pair *o, const ojh_jvalue *machine, int same_eve
     const ojh_jvalue *ref = ojh_jget(machine, "reference");
     grouped_or_na(a, sizeof a, ojh_jget(ref, "single_core_rounds_per_second"));
     grouped_or_na(b, sizeof b, ojh_jget(ref, "all_cores_rounds_per_second"));
-    snprintf(buf, sizeof buf, "%s rounds/s on one core, %s on all cores", a, b);
+    char score[160];
+    snprintf(score, sizeof score, "%s rounds/s on one core, %s on all cores", a, b);
     set_cell(t, r, 0, "CPU reference score");
-    set_cell(t, r++, 1, buf);
+    set_cell(t, r++, 1, score);
 
     t->rows = r;
     write_table(o, t);
@@ -322,8 +341,9 @@ static void tpm_section(out_pair *o, const collection *c) {
         set_cell(t, rows, 0, ojh_jstring(ojh_jget(r, "name"), c->items[i].name));
         grouped(buf, sizeof buf, turns);
         set_cell(t, rows, 1, buf);
-        fixed(buf, sizeof buf, ojh_jget(r, "tpm"), 1);
-        set_cell(t, rows, 2, turns > 0 ? buf : "n/a");
+        if (turns > 0 && number_present(ojh_jget(r, "tpm"))) grouped_decimal(buf, sizeof buf, ojh_jget(r, "tpm")->number, 1);
+        else snprintf(buf, sizeof buf, "n/a");
+        set_cell(t, rows, 2, buf);
         grouped_or_na(buf, sizeof buf, ojh_jget(r, "tpm_x_players"));
         set_cell(t, rows, 3, buf);
         grouped_or_na(buf, sizeof buf, ojh_jget(r, "tpm_x_regions"));
@@ -378,10 +398,15 @@ static void tpm_section(out_pair *o, const collection *c) {
         if (strcmp(ojh_jstring(ojh_jget(root, "metric"), ""), "tpm") != 0) continue;
         const ojh_jvalue *r = ojh_jget(root, "result");
         const ojh_jvalue *s = ojh_jget(root, "settings");
-        char line[1024];
-        snprintf(line, sizeof line, "%s. Asked for %.0f turns, seed %.0f, %.0f players where the game lets them be chosen.",
-                 ojh_jstring(ojh_jget(r, "how"), "not recorded"), ojh_jnumber(ojh_jget(s, "turns_requested"), 0),
-                 ojh_jnumber(ojh_jget(s, "seed"), 0), ojh_jnumber(ojh_jget(s, "players_requested"), 0));
+        char line[1024], who[96];
+        const ojh_jvalue *chosen = ojh_jget(s, "players_chosen");
+        const char *game = ojh_jstring(ojh_jget(r, "game"), "");
+        int by_ojh = ojh_jpresent(chosen) ? chosen->number != 0
+                                          : (strcmp(game, "freeciv") == 0 || strcmp(game, "unciv") == 0);
+        if (by_ojh) snprintf(who, sizeof who, "%.0f players, chosen by OJH", ojh_jnumber(ojh_jget(s, "players_requested"), 0));
+        else snprintf(who, sizeof who, "players as the game's own scenario or world sets them");
+        snprintf(line, sizeof line, "%s. Asked for %.0f turns, seed %.0f, %s.", ojh_jstring(ojh_jget(r, "how"), "not recorded"),
+                 ojh_jnumber(ojh_jget(s, "turns_requested"), 0), ojh_jnumber(ojh_jget(s, "seed"), 0), who);
         bullet(o, ojh_jstring(ojh_jget(r, "name"), c->items[i].name), line);
     }
     end_list(o);
@@ -455,7 +480,7 @@ int ojh_report_write(const char *dir, char *error, size_t error_len) {
     time_t now = time(NULL);
     struct tm *local = localtime(&now);
     if (local) strftime(when, sizeof when, "%Y-%m-%d %H:%M", local);
-    char intro[512];
+    char intro[1200];
     snprintf(intro, sizeof intro, "Written by OJH %s on %s from %d result file(s).", OJH_REPORT_VERSION, when, c->count);
     paragraph(&o, intro);
     if (c->skipped) {

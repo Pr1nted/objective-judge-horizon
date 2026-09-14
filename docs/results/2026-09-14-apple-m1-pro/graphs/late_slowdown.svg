@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 252" width="760" height="252" role="img" aria-label="Late-game slowdown">
+<title>Late-game slowdown</title>
+<rect width="760" height="252" fill="#FFFFFF"/>
+<text x="24" y="34" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="18" font-weight="600" fill="#1F2328">Late-game slowdown</text>
+<text x="24" y="56" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12.5" fill="#57606A">Less is better, best first. Shown for: median late turn time divided by median early turn time: 1 means turns never slowed down.</text>
+<line x1="172.0" y1="70" x2="172.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
+<text x="172.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">0.00</text>
+<line x1="289.0" y1="70" x2="289.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
+<text x="289.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">2.00</text>
+<line x1="406.0" y1="70" x2="406.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
+<text x="406.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">4.00</text>
+<line x1="523.0" y1="70" x2="523.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
+<text x="523.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">6.00</text>
+<line x1="640.0" y1="70" x2="640.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
+<text x="640.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">8.00</text>
+<text x="160" y="97" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">Greater Diplomacy 5</text>
+<rect x="172" y="81" width="40.3" height="22" rx="3" fill="#CC79A7"/>
+<text x="220.3" y="97" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12" fill="#1F2328">0.69x</text>
+<text x="160" y="131" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">Open Doctrines</text>
+<rect x="172" y="115" width="68.7" height="22" rx="3" fill="#56B4E9"/>
+<text x="248.7" y="131" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12" fill="#1F2328">1.17x</text>
+<text x="160" y="165" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">Unciv</text>
+<rect x="172" y="149" width="124.2" height="22" rx="3" fill="#0072B2"/>
+<text x="304.2" y="165" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12" fill="#1F2328">2.12x</text>
+<text x="160" y="199" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">Freeciv</text>
+<rect x="172" y="183" width="398.1" height="22" rx="3" fill="#E69F00"/>
+<text x="578.1" y="199" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12" fill="#1F2328">6.81x</text>
+</svg>

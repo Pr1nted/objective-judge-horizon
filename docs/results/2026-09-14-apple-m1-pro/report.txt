@@ -1,0 +1,619 @@
+Objective Judge Horizon (OJH) report
+====================================
+
+Written by OJH 0.2.0 on 2026-09-15 01:05 from 15 result file(s) covering 4 game(s).
+Measured: turn speed for 4, frame rate for 3, network for 4 and footprint for 4.
+
+At a glance
+-----------
+
+Games in order of their OJH score. Firsts and lasts count the statistics below on which
+a game came best or worst of the games measured for it; a statistic only one game has is
+not counted. Went best and went worst name the statistic where the game stood furthest
+ahead or behind.
+
+Game                 OJH score            Firsts  Lasts  Went best                                     Went worst
+-------------------  -------------------  ------  -----  --------------------------------------------  ---------------------------------------------------------
+Open Doctrines       2,599                19      5      CPU time per player-turn: 0.0012 s, 1st of 4  Start-up: 11.8 s, 4th of 4
+Unciv                1,566                7       1      Save time: 0.0369 s, 1st of 2                 Memory per player: 141 MiB, 4th of 4
+Freeciv              1,435 (provisional)  5       6      Peak memory: 58.6 MiB, 1st of 4               Player-turns per minute: 711.8 player-turns/min, 4th of 4
+Greater Diplomacy 5  1,039                2       21     Heaviest panel: 1,625 fps, 1st of 2           Data per turn, highest: 18.1 MiB, 4th of 4
+
+OJH score
+  Open Doctrines       ####################################  2,599 points
+  Unciv                ######################                1,566 points
+  Freeciv              ####################                  1,435 points
+  Greater Diplomacy 5  ##############                        1,039 points
+
+What went best and what went worst
+----------------------------------
+
+For every statistic
+...................
+
+Statistic                         Better when  Best                                        Worst                                         Best vs worst
+--------------------------------  -----------  ------------------------------------------  --------------------------------------------  -------------
+Turns per minute                  more         Open Doctrines, 1,381 turns/min             Greater Diplomacy 5, 74.61 turns/min          18.5x more
+Player-turns per minute           more         Open Doctrines, 51,101 player-turns/min     Freeciv, 711.8 player-turns/min               71.8x more
+Region-turns per minute           more         Open Doctrines, 1,142,165 region-turns/min  Greater Diplomacy 5, 67,600 region-turns/min  16.9x more
+Turns per minute, slowest run     more         Open Doctrines, 1,356 turns/min             Greater Diplomacy 5, 72.37 turns/min          18.7x more
+Median turn                       less         Open Doctrines, 0.0430 s                    Greater Diplomacy 5, 0.765 s                  17.8x less
+Slow turn (95th percentile)       less         Open Doctrines, 0.0547 s                    Freeciv, 1.272 s                              23.2x less
+Slowest turn                      less         Open Doctrines, 0.0633 s                    Freeciv, 2.047 s                              32.3x less
+Late-game slowdown                less         Greater Diplomacy 5, 0.69x                  Freeciv, 6.81x                                9.9x less
+Start-up                          less         Freeciv, 0.497 s                            Open Doctrines, 11.8 s                        23.8x less
+Peak memory                       less         Freeciv, 58.6 MiB                           Open Doctrines, 1.41 GiB                      24.6x less
+Memory per player                 less         Freeciv, 7.32 MiB                           Unciv, 141 MiB                                19.3x less
+CPU time per turn                 less         Open Doctrines, 0.0432 s                    Greater Diplomacy 5, 0.845 s                  19.5x less
+CPU time per player-turn          less         Open Doctrines, 0.0012 s                    Freeciv, 0.0831 s                             71.1x less
+Frame rate on the map             more         Open Doctrines, 751.4 fps                   Greater Diplomacy 5, 162.6 fps                4.6x more
+1% low frame rate                 more         Open Doctrines, 58.81 fps                   Greater Diplomacy 5, 44.02 fps                1.3x more
+Slow frame (99th percentile)      less         Open Doctrines, 0.0097 s                    Greater Diplomacy 5, 0.0152 s                 1.6x less
+Main menu                         more         Open Doctrines, 1,267 fps                   Greater Diplomacy 5, 708.8 fps                1.8x more
+Map, start of game                more         Open Doctrines, 292.9 fps                   Greater Diplomacy 5, 155.6 fps                1.9x more
+Map, zoomed out                   more         Open Doctrines, 339.6 fps                   Greater Diplomacy 5, 162.6 fps                2.1x more
+Map, zoomed in                    more         Open Doctrines, 1,118 fps                   Greater Diplomacy 5, 171.2 fps                6.5x more
+Map, scrolling                    more         Open Doctrines, 1,114 fps                   Greater Diplomacy 5, 166.6 fps                6.7x more
+Heaviest panel                    more         Greater Diplomacy 5, 1,625 fps              Open Doctrines, 859.7 fps                     1.9x more
+Map, late game                    more         Open Doctrines, 751.4 fps                   Greater Diplomacy 5, 115.4 fps                6.5x more
+Data per turn, highest            less         Open Doctrines, 28.8 KiB                    Greater Diplomacy 5, 18.1 MiB                 645.3x less
+Data per turn, median             less         Unciv, 25.7 KiB                             Greater Diplomacy 5, 11.6 MiB                 462.9x less
+Data per turn, lowest             less         Freeciv, 15.9 KiB                           Greater Diplomacy 5, 10.3 MiB                 662.8x less
+Highest data per turn per player  less         Unciv, 4.07 KiB                             Freeciv, 4.92 KiB                             1.2x less
+Turn delivery time                less         Freeciv, 0.0559 s                           Greater Diplomacy 5, 0.0844 s                 1.5x less
+Busiest second                    less         Unciv, 513 KiB                              Greater Diplomacy 5, 39.2 MiB                 78.3x less
+Install size                      less         Unciv, 54.5 MiB                             Greater Diplomacy 5, 162 MiB                  3.0x less
+Save file size                    less         Unciv, 16.6 KiB                             Open Doctrines, 15.4 MiB                      951.8x less
+Save time                         less         Unciv, 0.0369 s                             Greater Diplomacy 5, 0.369 s                  10.0x less
+Load time                         less         Unciv, 0.0336 s                             Open Doctrines, 2.702 s                       80.4x less
+
+For every game
+..............
+
+  - Open Doctrines: went best at CPU time per player-turn: 0.0012 s, 1st of 4;
+    Player-turns per minute: 51,101 player-turns/min, 1st of 4; Map, scrolling: 1,114
+    fps, 1st of 2. Went worst at Start-up: 11.8 s, 4th of 4; Load time: 2.702 s, 4th of
+    4; Save file size: 15.4 MiB, 4th of 4.
+  - Unciv: went best at Save time: 0.0369 s, 1st of 2; Load time: 0.0336 s, 1st of 4;
+    Save file size: 16.6 KiB, 1st of 4. Went worst at Memory per player: 141 MiB, 4th of
+    4.
+  - Freeciv: went best at Peak memory: 58.6 MiB, 1st of 4; Memory per player: 7.32 MiB,
+    1st of 4; Turn delivery time: 0.0559 s, 1st of 2. Went worst at Player-turns per
+    minute: 711.8 player-turns/min, 4th of 4; Late-game slowdown: 6.81x, 4th of 4; CPU
+    time per player-turn: 0.0831 s, 4th of 4.
+  - Greater Diplomacy 5: went best at Heaviest panel: 1,625 fps, 1st of 2; Late-game
+    slowdown: 0.69x, 1st of 4. Went worst at Data per turn, highest: 18.1 MiB, 4th of 4;
+    Data per turn, median: 11.6 MiB, 4th of 4; Data per turn, lowest: 10.3 MiB, 4th of
+    4.
+
+Machine
+-------
+
+Part                 This machine
+-------------------  -----------------------------------------------
+OS                   macOS 26.3 (25D125)
+Model                MacBookPro18,1
+CPU                  Apple M1 Pro
+Logical CPUs         10 (8 performance, 2 efficiency)
+Memory               16.0 GiB
+GPU                  Apple M1 Pro (16 cores)
+Display              3456 x 2234 Retina
+Power                mains
+CPU reference score  1,696 rounds/s on one core, 12,471 on all cores
+
+The reference score is OJH's own fixed CPU workload (src/machine.c), timed on this
+machine. Divide a result by it to compare across hardware.
+
+OJH scores
+----------
+
+Each game's score is its own: it is built from that game's result files alone, against
+fixed reference levels, so no game's score depends on which other games are in this
+report. Each scorecard next to this report shows every part, and has a badge (.svg) to
+go with it.
+
+Game                 OJH score  Coverage  Status       Scorecard
+-------------------  ---------  --------  -----------  ----------------------
+Open Doctrines       2,599      96%       final        score-opendoctrines.md
+Unciv                1,566      76%       final        score-unciv.md
+Freeciv              1,435      80%       provisional  score-freeciv.md
+Greater Diplomacy 5  1,039      100%      final        score-gd5.md
+
+A provisional score comes from a run too short or incomplete to stand behind; its
+scorecard says why. Measure again before publishing it.
+
+Turn speed
+----------
+
+How fast each game plays its turns with every player run by its own AI. Start-up and
+world generation are timed separately and are not part of the turns. Player-turns and
+region-turns multiply turn speed by the size of the game, so a larger game is not
+punished for its size.
+
+Game                 Turns per minute       Player-turns per minute        Region-turns per minute           Turns per minute, slowest run  Median turn     Slow turn (95th percentile)  Slowest turn    Late-game slowdown  Start-up       Players  Map regions
+-------------------  ---------------------  -----------------------------  --------------------------------  -----------------------------  --------------  ---------------------------  --------------  ------------------  -------------  -------  -----------
+Open Doctrines       1,381 turns/min (1st)  51,101 player-turns/min (1st)  1,142,165 region-turns/min (1st)  1,356 turns/min (1st)          0.0430 s (1st)  0.0547 s (1st)               0.0633 s (1st)  1.17x (2nd)         11.8 s (4th)   37       827
+Unciv                654.2 turns/min (2nd)  5,234 player-turns/min (2nd)   471,668 region-turns/min (2nd)    592.0 turns/min (2nd)          0.0947 s (2nd)  0.150 s (2nd)                0.244 s (2nd)   2.12x (3rd)         0.628 s (2nd)  8        721
+Freeciv              88.98 turns/min (3rd)  711.8 player-turns/min (4th)   230,630 region-turns/min (3rd)    88.52 turns/min (3rd)          0.728 s (3rd)   1.272 s (4th)                2.047 s (4th)   6.81x (4th)         0.497 s (1st)  8        2,592
+Greater Diplomacy 5  74.61 turns/min (4th)  2,612 player-turns/min (3rd)   67,600 region-turns/min (4th)     72.37 turns/min (4th)          0.765 s (4th)   1.260 s (3rd)                1.461 s (3rd)   0.69x (1st)         1.109 s (3rd)  35       906
+
+Places are in brackets: 1st is the best of the games measured for that statistic. A
+statistic that is not ranked (players, map size, cores in use, information per minute)
+is context: more of it is neither better nor worse on its own.
+
+Graphs
+......
+
+Turns per minute
+  Open Doctrines       ####################################  1,381 turns/min
+  Unciv                #################                     654.2 turns/min
+  Freeciv              ##                                    88.98 turns/min
+  Greater Diplomacy 5  ##                                    74.61 turns/min
+
+Player-turns per minute
+  Open Doctrines       ####################################  51,101 player-turns/min
+  Unciv                ####                                  5,234 player-turns/min
+  Greater Diplomacy 5  ##                                    2,612 player-turns/min
+  Freeciv              #                                     711.8 player-turns/min
+
+Region-turns per minute
+  Open Doctrines       ####################################  1,142,165 region-turns/min
+  Unciv                ###############                       471,668 region-turns/min
+  Freeciv              #######                               230,630 region-turns/min
+  Greater Diplomacy 5  ##                                    67,600 region-turns/min
+
+Turns per minute, slowest run
+  Open Doctrines       ####################################  1,356 turns/min
+  Unciv                ################                      592.0 turns/min
+  Freeciv              ##                                    88.52 turns/min
+  Greater Diplomacy 5  ##                                    72.37 turns/min
+
+Median turn
+  Open Doctrines       ##                                    0.0430 s
+  Unciv                ####                                  0.0947 s
+  Freeciv              ##################################    0.728 s
+  Greater Diplomacy 5  ####################################  0.765 s
+
+Slow turn (95th percentile)
+  Open Doctrines       ##                                    0.0547 s
+  Unciv                ####                                  0.150 s
+  Greater Diplomacy 5  ####################################  1.260 s
+  Freeciv              ####################################  1.272 s
+
+Slowest turn
+  Open Doctrines       #                                     0.0633 s
+  Unciv                ####                                  0.244 s
+  Greater Diplomacy 5  ##########################            1.461 s
+  Freeciv              ####################################  2.047 s
+
+Late-game slowdown
+  Greater Diplomacy 5  ####                                  0.69x
+  Open Doctrines       ######                                1.17x
+  Unciv                ###########                           2.12x
+  Freeciv              ####################################  6.81x
+
+Start-up
+  Freeciv              ##                                    0.497 s
+  Unciv                ##                                    0.628 s
+  Greater Diplomacy 5  ###                                   1.109 s
+  Open Doctrines       ####################################  11.8 s
+
+Players
+  Open Doctrines       ####################################  37
+  Greater Diplomacy 5  ##################################    35
+  Freeciv              ########                              8
+  Unciv                ########                              8
+
+Map regions
+  Freeciv              ####################################  2,592
+  Greater Diplomacy 5  #############                         906
+  Open Doctrines       ###########                           827
+  Unciv                ##########                            721
+
+What each statistic means
+.........................
+
+  - Turns per minute: complete turns played in a minute with every player run by the
+    game's AI. More is better.
+  - Player-turns per minute: turns per minute times players, so a game with more players
+    is not punished. More is better.
+  - Region-turns per minute: turns per minute times map regions, so a bigger map is not
+    punished. More is better.
+  - Turns per minute, slowest run: the slowest of the repeated runs: the figure a game
+    reaches every time. More is better.
+  - Median turn: the typical time one turn takes. Less is better.
+  - Slow turn (95th percentile): only one turn in twenty takes longer than this. Less is
+    better.
+  - Slowest turn: the longest a player waited for one turn in the run. Less is better.
+  - Late-game slowdown: median late turn time divided by median early turn time: 1 means
+    turns never slowed down. Less is better.
+  - Start-up: from launching the game to its first turn starting, world generation or
+    loading included. Less is better.
+  - Players: how many players the measured game had. Not ranked.
+  - Map regions: provinces or tiles on the measured map. Not ranked.
+
+How each game was timed
+.......................
+
+  - Open Doctrines: Open Doctrines' own OJH turn lines (OD_OJH=1): processTurn timed
+    turn by turn inside the headless eval, 250 turns. Asked for 250 turns, seed
+    20260914, players as the game's own scenario or world sets them.
+  - Unciv: OJH's Unciv driver times each GameInfo.nextTurn call (250 turns). Asked for
+    250 turns, seed 20260914, 8 players, chosen by OJH.
+  - Freeciv: gaps between Freeciv's per-turn "End/start-turn server/ai activities" log
+    lines (249 turns timed of 250 markers). Asked for 250 turns, seed 20260914, 8
+    players, chosen by OJH.
+  - Greater Diplomacy 5: OJH's GD5 driver times each turn through GD5's own turn
+    manager, redraw included (250 turns, LLM diplomacy off). Asked for 250 turns, seed
+    20260914, players as the game's own scenario or world sets them.
+
+Before comparing these numbers
+..............................
+
+  - Run length: The runs timed different numbers of turns (249 to 250). Turns get slower
+    as a game goes on, so a shorter run reads faster: compare runs of the same length.
+  - Game size: Player counts differ (8 to 37), and so do map sizes. The player-turn and
+    region-turn figures account for size, not for rules or how much thinking each AI
+    does.
+  - Scope: Every number comes from one machine under the fairness rules in README.md.
+    None of it is a claim about other hardware.
+
+CPU and memory
+--------------
+
+What the game cost the machine while it played those turns, sampled ten times a second
+over the game and every process it started.
+
+Game                 Peak memory     Memory per player  CPU time per turn  CPU time per player-turn  Cores in use
+-------------------  --------------  -----------------  -----------------  ------------------------  ------------
+Freeciv              58.6 MiB (1st)  7.32 MiB (1st)     0.665 s (3rd)      0.0831 s (4th)            0.990 cores
+Greater Diplomacy 5  1.02 GiB (2nd)  29.8 MiB (2nd)     0.845 s (4th)      0.0241 s (2nd)            1.05 cores
+Unciv                1.11 GiB (3rd)  141 MiB (4th)      0.288 s (2nd)      0.0360 s (3rd)            3.28 cores
+Open Doctrines       1.41 GiB (4th)  39.0 MiB (3rd)     0.0432 s (1st)     0.0012 s (1st)            0.990 cores
+
+Places are in brackets: 1st is the best of the games measured for that statistic. A
+statistic that is not ranked (players, map size, cores in use, information per minute)
+is context: more of it is neither better nor worse on its own.
+
+Graphs
+......
+
+Peak memory
+  Freeciv              #                                     58.6 MiB
+  Greater Diplomacy 5  ##########################            1.02 GiB
+  Unciv                ############################          1.11 GiB
+  Open Doctrines       ####################################  1.41 GiB
+
+Memory per player
+  Freeciv              ##                                    7.32 MiB
+  Greater Diplomacy 5  ########                              29.8 MiB
+  Open Doctrines       ##########                            39.0 MiB
+  Unciv                ####################################  141 MiB
+
+CPU time per turn
+  Open Doctrines       ##                                    0.0432 s
+  Unciv                ############                          0.288 s
+  Freeciv              ############################          0.665 s
+  Greater Diplomacy 5  ####################################  0.845 s
+
+CPU time per player-turn
+  Open Doctrines       #                                     0.0012 s
+  Greater Diplomacy 5  ##########                            0.0241 s
+  Unciv                ################                      0.0360 s
+  Freeciv              ####################################  0.0831 s
+
+Cores in use
+  Unciv                ####################################  3.28 cores
+  Greater Diplomacy 5  ############                          1.05 cores
+  Freeciv              ###########                           0.990 cores
+  Open Doctrines       ###########                           0.990 cores
+
+What each statistic means
+.........................
+
+  - Peak memory: the most memory the game and every process it started held at once.
+    Less is better.
+  - Memory per player: peak memory divided by players. Less is better.
+  - CPU time per turn: processor time spent per turn, summed over every core. Less is
+    better.
+  - CPU time per player-turn: CPU time per turn divided by players: what one AI player's
+    turn costs. Less is better.
+  - Cores in use: median number of cores busy while turns ran; more is neither better
+    nor worse on its own. Not ranked.
+
+Frame rate
+----------
+
+Frames per second in the same scenes in every game, with frame caps and vsync off where
+the game allows it. A scene a game does not have is n/a.
+
+Game                 Frame rate on the map  1% low frame rate  Slow frame (99th percentile)  Main menu        Map, start of game  Map, zoomed out  Map, zoomed in   Map, scrolling   Heaviest panel   Map, late game
+-------------------  ---------------------  -----------------  ----------------------------  ---------------  ------------------  ---------------  ---------------  ---------------  ---------------  ---------------
+Open Doctrines       751.4 fps (1st)        58.81 fps (1st)    0.0097 s (1st)                1,267 fps (1st)  292.9 fps (1st)     339.6 fps (1st)  1,118 fps (1st)  1,114 fps (1st)  859.7 fps (2nd)  751.4 fps (1st)
+Greater Diplomacy 5  162.6 fps (2nd)        44.02 fps (2nd)    0.0152 s (2nd)                708.8 fps (2nd)  155.6 fps (2nd)     162.6 fps (2nd)  171.2 fps (2nd)  166.6 fps (2nd)  1,625 fps (1st)  115.4 fps (2nd)
+Freeciv              n/a                    n/a                n/a                           n/a              n/a                 n/a              n/a              n/a              n/a              n/a
+
+Places are in brackets: 1st is the best of the games measured for that statistic. A
+statistic that is not ranked (players, map size, cores in use, information per minute)
+is context: more of it is neither better nor worse on its own.
+
+Graphs
+......
+
+Frame rate on the map
+  Open Doctrines       ####################################  751.4 fps
+  Greater Diplomacy 5  ########                              162.6 fps
+  Freeciv              n/a
+
+1% low frame rate
+  Open Doctrines       ####################################  58.81 fps
+  Greater Diplomacy 5  ###########################           44.02 fps
+  Freeciv              n/a
+
+Slow frame (99th percentile)
+  Open Doctrines       #######################               0.0097 s
+  Greater Diplomacy 5  ####################################  0.0152 s
+  Freeciv              n/a
+
+Main menu
+  Open Doctrines       ####################################  1,267 fps
+  Greater Diplomacy 5  ####################                  708.8 fps
+  Freeciv              n/a
+
+Map, start of game
+  Open Doctrines       ####################################  292.9 fps
+  Greater Diplomacy 5  ###################                   155.6 fps
+  Freeciv              n/a
+
+Map, zoomed out
+  Open Doctrines       ####################################  339.6 fps
+  Greater Diplomacy 5  #################                     162.6 fps
+  Freeciv              n/a
+
+Map, zoomed in
+  Open Doctrines       ####################################  1,118 fps
+  Greater Diplomacy 5  ######                                171.2 fps
+  Freeciv              n/a
+
+Map, scrolling
+  Open Doctrines       ####################################  1,114 fps
+  Greater Diplomacy 5  #####                                 166.6 fps
+  Freeciv              n/a
+
+Heaviest panel
+  Greater Diplomacy 5  ####################################  1,625 fps
+  Open Doctrines       ###################                   859.7 fps
+  Freeciv              n/a
+
+Map, late game
+  Open Doctrines       ####################################  751.4 fps
+  Greater Diplomacy 5  ######                                115.4 fps
+  Freeciv              n/a
+
+What each statistic means
+.........................
+
+  - Frame rate on the map: median of the average frame rate over the map scenes. More is
+    better.
+  - 1% low frame rate: the frame rate of the slowest 1% of frames in the game's worst
+    scene: what stutter feels like. More is better.
+  - Slow frame (99th percentile): in the game's slowest scene, only one frame in a
+    hundred takes longer than this. Less is better.
+  - Main menu: average frame rate on the main menu, idle. More is better.
+  - Map, start of game: the world map at the start of a game, default zoom, idle. More
+    is better.
+  - Map, zoomed out: the world map zoomed all the way out. More is better.
+  - Map, zoomed in: the world map zoomed all the way in. More is better.
+  - Map, scrolling: the world map scrolling continuously. More is better.
+  - Heaviest panel: the heaviest information screen: economy, diplomacy or research.
+    More is better.
+  - Map, late game: the world map after many turns have been played. More is better.
+
+How each game was measured
+..........................
+
+  - Open Doctrines: Open Doctrines' own --ojh-fps mode: its real window with vsync and
+    the frame cap off, every frame timed for 5.00 s per scene after two seconds of
+    settling, on the <open-doctrines>/data/saves/ojh-benchmark.odsv world; the late-game
+    map comes after 20 turns
+  - Greater Diplomacy 5: OJH's GD5 driver boots the real game with SDL's dummy video
+    driver and times every update and draw of each scene for 5.00 s after a warm-up,
+    with no frame cap; pygame draws in software, so this is GD5's own drawing cost with
+    no display in the way. The late-game map comes after 20 turns
+  - Freeciv: not measured: Freeciv's client redraws only when something on the map
+    changes, so it has no steady frame rate to time
+
+Network
+-------
+
+The game's netcode, measured on this machine through OJH's counting relay, so the
+internet is not in the numbers: bytes per turn, information per minute and how quickly a
+finished turn reaches the clients.
+
+Game                 Data per turn, highest  Data per turn, median  Data per turn, lowest  Highest data per turn per player  Turn delivery time  Network information per minute  Information per minute per client  Busiest second
+-------------------  ----------------------  ---------------------  ---------------------  --------------------------------  ------------------  ------------------------------  ---------------------------------  --------------
+Open Doctrines       28.8 KiB (1st)          26.6 KiB (2nd)         26.1 KiB (3rd)         n/a                               n/a                 49.9 MiB/min                    25.0 MiB/min                       538 KiB (2nd)
+Unciv                32.6 KiB (2nd)          25.7 KiB (1st)         20.2 KiB (2nd)         4.07 KiB (1st)                    n/a                 40.4 MiB/min                    20.2 MiB/min                       513 KiB (1st)
+Freeciv              39.3 KiB (3rd)          29.3 KiB (3rd)         15.9 KiB (1st)         4.92 KiB (2nd)                    0.0559 s (1st)      26.9 MiB/min                    13.4 MiB/min                       821 KiB (3rd)
+Greater Diplomacy 5  18.1 MiB (4th)          11.6 MiB (4th)         10.3 MiB (4th)         n/a                               0.0844 s (2nd)      1.44 GiB/min                    738 MiB/min                        39.2 MiB (4th)
+
+Places are in brackets: 1st is the best of the games measured for that statistic. A
+statistic that is not ranked (players, map size, cores in use, information per minute)
+is context: more of it is neither better nor worse on its own.
+
+Graphs
+......
+
+Data per turn, highest
+  Open Doctrines       #                                     28.8 KiB
+  Unciv                #                                     32.6 KiB
+  Freeciv              #                                     39.3 KiB
+  Greater Diplomacy 5  ####################################  18.1 MiB
+
+Data per turn, median
+  Unciv                #                                     25.7 KiB
+  Open Doctrines       #                                     26.6 KiB
+  Freeciv              #                                     29.3 KiB
+  Greater Diplomacy 5  ####################################  11.6 MiB
+
+Data per turn, lowest
+  Freeciv              #                                     15.9 KiB
+  Unciv                #                                     20.2 KiB
+  Open Doctrines       #                                     26.1 KiB
+  Greater Diplomacy 5  ####################################  10.3 MiB
+
+Highest data per turn per player
+  Unciv                ##############################        4.07 KiB
+  Freeciv              ####################################  4.92 KiB
+  Open Doctrines       n/a
+  Greater Diplomacy 5  n/a
+
+Turn delivery time
+  Freeciv              ########################              0.0559 s
+  Greater Diplomacy 5  ####################################  0.0844 s
+  Open Doctrines       n/a
+  Unciv                n/a
+
+Network information per minute
+  Greater Diplomacy 5  ####################################  1.44 GiB/min
+  Open Doctrines       #                                     49.9 MiB/min
+  Unciv                #                                     40.4 MiB/min
+  Freeciv              #                                     26.9 MiB/min
+
+Information per minute per client
+  Greater Diplomacy 5  ####################################  738 MiB/min
+  Open Doctrines       #                                     25.0 MiB/min
+  Unciv                #                                     20.2 MiB/min
+  Freeciv              #                                     13.4 MiB/min
+
+Busiest second
+  Unciv                #                                     513 KiB
+  Open Doctrines       #                                     538 KiB
+  Freeciv              #                                     821 KiB
+  Greater Diplomacy 5  ####################################  39.2 MiB
+
+Data per turn: lowest .. [median] .. highest
+  Open Doctrines: 26.1 KiB .. [26.6 KiB] .. 28.8 KiB
+  Unciv: 20.2 KiB .. [25.7 KiB] .. 32.6 KiB
+  Freeciv: 15.9 KiB .. [29.3 KiB] .. 39.3 KiB
+  Greater Diplomacy 5: 10.3 MiB .. [11.6 MiB] .. 18.1 MiB
+
+What each statistic means
+.........................
+
+  - Data per turn, highest: the most bytes one turn took, both ways: what a connection
+    must survive. Less is better.
+  - Data per turn, median: the bytes a typical turn takes, both ways. Less is better.
+  - Data per turn, lowest: the fewest bytes one turn took, both ways: the floor a
+    connection always carries. Less is better.
+  - Highest data per turn per player: the highest data per turn divided by players in
+    the game. Less is better.
+  - Turn delivery time: median time from a turn ending to its last byte reaching the
+    clients, with no internet in the way. Less is better.
+  - Network information per minute: bytes moved per minute of play, both ways; more is
+    not better or worse on its own. Not ranked.
+  - Information per minute per client: network information per minute divided by
+    clients. Not ranked.
+  - Busiest second: the most bytes moved in any one second: the burst a connection must
+    absorb. Less is better.
+
+How each game was measured
+..........................
+
+  - Open Doctrines: Open Doctrines' headless eval with OD_OJH_NET: after every turn it
+    packs the same turn delta its multiplayer host broadcasts (Game::mpResolveTurn,
+    SaveManager::packTurn) and reports its size times 2 clients. Joining needs a
+    signed-in account, so no client is on the wire: the bytes are the host's real
+    payload, turn delivery is n/a, and the few bytes of each client's orders are not
+    counted
+  - Unciv: Unciv has no live connection: its multiplayer uploads the whole game after a
+    turn and the other player downloads it. OJH's Unciv driver plays 20 turns with 8
+    civilizations and reports the size of that compressed game after each one, counted
+    once up and once down; no relay, so turn delivery is n/a
+  - Freeciv: freeciv-server with 8 AI players and 2 freeciv-gtk4 clients on this
+    machine, each attached as a global observer, every byte through OJH's loopback
+    relay; a turn ends at the server's End/start-turn log line
+  - Greater Diplomacy 5: GD5's own real-time server (RealtimeServer and
+    MapRealtimeDriver) hosting the 1939 scenario, with 2 real RealtimeClient guests
+    joining through OJH's loopback relay and submitting every turn; turns end when the
+    server opens the next one
+
+Footprint
+---------
+
+What a player downloads and keeps: install size, and the size and speed of a save.
+
+Game                 Install size    Save file size  Save time       Load time
+-------------------  --------------  --------------  --------------  --------------
+Unciv                54.5 MiB (1st)  16.6 KiB (1st)  0.0369 s (1st)  0.0336 s (1st)
+Freeciv              73.0 MiB (2nd)  24.8 KiB (2nd)  n/a             0.166 s (2nd)
+Open Doctrines       105 MiB (3rd)   15.4 MiB (4th)  n/a             2.702 s (4th)
+Greater Diplomacy 5  162 MiB (4th)   5.65 MiB (3rd)  0.369 s (2nd)   0.545 s (3rd)
+
+Places are in brackets: 1st is the best of the games measured for that statistic. A
+statistic that is not ranked (players, map size, cores in use, information per minute)
+is context: more of it is neither better nor worse on its own.
+
+Graphs
+......
+
+Install size
+  Unciv                ############                          54.5 MiB
+  Freeciv              ################                      73.0 MiB
+  Open Doctrines       #######################               105 MiB
+  Greater Diplomacy 5  ####################################  162 MiB
+
+Save file size
+  Unciv                #                                     16.6 KiB
+  Freeciv              #                                     24.8 KiB
+  Greater Diplomacy 5  #############                         5.65 MiB
+  Open Doctrines       ####################################  15.4 MiB
+
+Save time
+  Unciv                ####                                  0.0369 s
+  Greater Diplomacy 5  ####################################  0.369 s
+  Freeciv              n/a
+  Open Doctrines       n/a
+
+Load time
+  Unciv                #                                     0.0336 s
+  Freeciv              ##                                    0.166 s
+  Greater Diplomacy 5  #######                               0.545 s
+  Open Doctrines       ####################################  2.702 s
+
+What each statistic means
+.........................
+
+  - Install size: everything a player downloads to play. Less is better.
+  - Save file size: one save of the measured game. Less is better.
+  - Save time: how long writing that save took. Less is better.
+  - Load time: how long loading that save took. Less is better.
+
+How each game was measured
+..........................
+
+  - Unciv: install is Unciv.jar (the Java runtime not counted); OJH's Unciv driver plays
+    20 turns, then times UncivFiles.gameInfoToString with compression, the form Unciv
+    writes saves in, and gameInfoFromString on the result
+  - Freeciv: install is the Freeciv folder the server runs from; the save is the largest
+    of Freeciv's own per-turn saves over 20 turns, in its default compression; load time
+    is freeciv-server started on that save minus the same server started empty; Freeciv
+    has no command to time a save, so save time is n/a
+  - Open Doctrines: install is the server binary and the data folder; the save is
+    <open-doctrines>/data/saves/ojh-benchmark.odsv; load time is OpenDoctrinesServer
+    --load --check from launch to exit, process start included; Open Doctrines has no
+    command to time a save, so save time is n/a; install size is from the run before the
+    benchmark save was copied into data/saves
+  - Greater Diplomacy 5: install is the Greater Diplomacy 5 folder without .git and
+    caches (Python and its packages not counted); OJH's GD5 driver plays 20 turns, then
+    times GD5's own save_map_data and loading that save into a new Map, and measures the
+    save folder
+
+Not measured yet
+----------------
+
+These measurements have no result file in this folder, so their statistics are n/a above
+and their score parts are left out.
+
+  - Unciv: Frame rate (`ojh fps unciv`)
+

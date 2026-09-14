@@ -1,0 +1,42 @@
+{
+  "ojh_version": "0.1.0",
+  "metric": "footprint",
+  "machine": {
+    "os": "macOS 26.3 (25D125)",
+    "model": "MacBookPro18,1",
+    "cpu": "Apple M1 Pro",
+    "logical_cpus": 10,
+    "performance_cpus": 8,
+    "efficiency_cpus": 2,
+    "memory_bytes": 17179869184,
+    "gpu": "Apple M1 Pro",
+    "gpu_cores": "16",
+    "display": "3456 x 2234 Retina",
+    "on_battery": false,
+    "reference": {
+      "workload": "sha256 + sort + mix of a 64 KiB buffer (src/machine.c)",
+      "seconds": 3.0,
+      "cores": 10,
+      "single_core_rounds_per_second": 1696.0,
+      "all_cores_rounds_per_second": 12471.0
+    }
+  },
+  "settings": {
+    "turns_requested": 20,
+    "seed": 20260914,
+    "players_requested": 8
+  },
+  "result": {
+    "game": "freeciv",
+    "name": "Freeciv",
+    "exit_code": 0,
+    "install_bytes": 76582165,
+    "install_files": 4363,
+    "install_paths": "/opt/homebrew/Cellar/freeciv/3.2.6",
+    "save_bytes": 25390,
+    "save_seconds": null,
+    "load_seconds": 0.1661,
+    "how": "install is the Freeciv folder the server runs from; the save is the largest of Freeciv's own per-turn saves over 20 turns, in its default compression; load time is freeciv-server started on that save minus the same server started empty; Freeciv has no command to time a save, so save time is n/a"
+  },
+  "error": null
+}

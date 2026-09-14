@@ -1,5 +1,5 @@
 build/
 build-*/
-results/
+/results/
 .DS_Store
 __pycache__/

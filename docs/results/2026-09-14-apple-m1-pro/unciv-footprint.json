@@ -1,0 +1,42 @@
+{
+  "ojh_version": "0.1.0",
+  "metric": "footprint",
+  "machine": {
+    "os": "macOS 26.3 (25D125)",
+    "model": "MacBookPro18,1",
+    "cpu": "Apple M1 Pro",
+    "logical_cpus": 10,
+    "performance_cpus": 8,
+    "efficiency_cpus": 2,
+    "memory_bytes": 17179869184,
+    "gpu": "Apple M1 Pro",
+    "gpu_cores": "16",
+    "display": "3456 x 2234 Retina",
+    "on_battery": false,
+    "reference": {
+      "workload": "sha256 + sort + mix of a 64 KiB buffer (src/machine.c)",
+      "seconds": 3.0,
+      "cores": 10,
+      "single_core_rounds_per_second": 1736.0,
+      "all_cores_rounds_per_second": 11190.0
+    }
+  },
+  "settings": {
+    "turns_requested": 20,
+    "seed": 20260914,
+    "players_requested": 8
+  },
+  "result": {
+    "game": "unciv",
+    "name": "Unciv",
+    "exit_code": 0,
+    "install_bytes": 57187564,
+    "install_files": 1,
+    "install_paths": "/opt/homebrew/Cellar/unciv/4.22.0/libexec/Unciv.jar",
+    "save_bytes": 16984,
+    "save_seconds": 0.0369,
+    "load_seconds": 0.0336,
+    "how": "install is Unciv.jar (the Java runtime not counted); OJH's Unciv driver plays 20 turns, then times UncivFiles.gameInfoToString with compression, the form Unciv writes saves in, and gameInfoFromString on the result"
+  },
+  "error": null
+}

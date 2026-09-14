@@ -1,0 +1,42 @@
+{
+  "ojh_version": "0.1.0",
+  "metric": "footprint",
+  "machine": {
+    "os": "macOS 26.3 (25D125)",
+    "model": "MacBookPro18,1",
+    "cpu": "Apple M1 Pro",
+    "logical_cpus": 10,
+    "performance_cpus": 8,
+    "efficiency_cpus": 2,
+    "memory_bytes": 17179869184,
+    "gpu": "Apple M1 Pro",
+    "gpu_cores": "16",
+    "display": "3456 x 2234 Retina",
+    "on_battery": false,
+    "reference": {
+      "workload": "sha256 + sort + mix of a 64 KiB buffer (src/machine.c)",
+      "seconds": 3.0,
+      "cores": 10,
+      "single_core_rounds_per_second": 1712.7,
+      "all_cores_rounds_per_second": 11493.7
+    }
+  },
+  "settings": {
+    "turns_requested": 20,
+    "seed": 20260914,
+    "players_requested": 8
+  },
+  "result": {
+    "game": "gd5",
+    "name": "Greater Diplomacy 5",
+    "exit_code": 0,
+    "install_bytes": 169394669,
+    "install_files": 1737,
+    "install_paths": "<greater-diplomacy-5>",
+    "save_bytes": 5927249,
+    "save_seconds": 0.3692,
+    "load_seconds": 0.5447,
+    "how": "install is the Greater Diplomacy 5 folder without .git and caches (Python and its packages not counted); OJH's GD5 driver plays 20 turns, then times GD5's own save_map_data and loading that save into a new Map, and measures the save folder"
+  },
+  "error": null
+}

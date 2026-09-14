@@ -1,0 +1,42 @@
+{
+ "ojh_version": "0.1.0",
+ "metric": "footprint",
+ "machine": {
+  "os": "macOS 26.3 (25D125)",
+  "model": "MacBookPro18,1",
+  "cpu": "Apple M1 Pro",
+  "logical_cpus": 10,
+  "performance_cpus": 8,
+  "efficiency_cpus": 2,
+  "memory_bytes": 17179869184,
+  "gpu": "Apple M1 Pro",
+  "gpu_cores": "16",
+  "display": "3456 x 2234 Retina",
+  "on_battery": false,
+  "reference": {
+   "workload": "sha256 + sort + mix of a 64 KiB buffer (src/machine.c)",
+   "seconds": 3.0,
+   "cores": 10,
+   "single_core_rounds_per_second": 1714.3,
+   "all_cores_rounds_per_second": 11422.3
+  }
+ },
+ "settings": {
+  "turns_requested": 20,
+  "seed": 20260914,
+  "players_requested": 8
+ },
+ "result": {
+  "game": "opendoctrines",
+  "name": "Open Doctrines",
+  "exit_code": 0,
+  "install_bytes": 109713161,
+  "install_files": 1162,
+  "install_paths": "<open-doctrines>/build-release/OpenDoctrinesServer; <open-doctrines>/data",
+  "save_bytes": 16165654,
+  "save_seconds": null,
+  "load_seconds": 2.7022,
+  "how": "install is the server binary and the data folder; the save is <open-doctrines>/data/saves/ojh-benchmark.odsv; load time is OpenDoctrinesServer --load --check from launch to exit, process start included; Open Doctrines has no command to time a save, so save time is n/a; install size is from the run before the benchmark save was copied into data/saves"
+ },
+ "error": null
+}

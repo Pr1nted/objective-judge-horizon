@@ -1,0 +1,92 @@
+Freeciv: OJH score
+==================
+
+1,435 points, OJH score version 2, provisional
+
+This score is built from this game's own result files and nothing else. Every part is
+measured against a fixed reference level, not against other games, so adding, removing
+or re-running another game never changes it.
+
+Why it is provisional
+---------------------
+
+  - the Frame rate run did not finish cleanly, so its figures may be partial
+  - scored on 80% of the weight; not reported: Frame rate, Smoothness
+
+Parts
+-----
+
+Part                 Measured by  Weight  Measured                  On the reference CPU      Worth 1,000 points        Points
+-------------------  -----------  ------  ------------------------  ------------------------  ------------------------  ------
+Turn throughput      ojh tpm      22%     711.8 player-turns/min    416.3 player-turns/min    2,000 player-turns/min    273
+World throughput     ojh tpm      13%     230,630 region-turns/min  134,895 region-turns/min  200,000 region-turns/min  744
+Late-game pace       ojh tpm      8%      0.15                      same                      0.50                      372
+Steadiness           ojh tpm      5%      0.57                      same                      0.50                      1,101
+Start-up             ojh tpm      5%      0.497 s                   0.850 s                   10.0 s                    3,675
+CPU per player-turn  ojh tpm      6%      0.0831 s                  0.142 s                   0.0100 s                  98
+Memory               ojh tpm      8%      58.6 MiB                  same                      2.00 GiB                  5,169
+Frame rate           ojh fps      12%     not measured              n/a                       60 fps                    n/a
+Smoothness           ojh fps      8%      not measured              n/a                       30 fps                    n/a
+Data per turn        ojh net      9%      39.3 KiB                  same                      256 KiB                   2,909
+Turn delivery        ojh net      4%      0.0559 s                  0.0957 s                  0.100 s                   1,032
+
+What each part measures
+.......................
+
+  - Turn throughput: turns per minute times players: how many player-turns the game
+    resolves in a minute.
+  - World throughput: turns per minute times map regions: how much map the game resolves
+    in a minute.
+  - Late-game pace: median early turn time divided by median late turn time: 1 means
+    turns never slow down.
+  - Steadiness: median turn time divided by the 95th percentile: 1 means no turn is
+    slower than usual.
+  - Start-up: seconds from launching the game to its first turn starting. Less is
+    better.
+  - CPU per player-turn: processor time one AI player's turn costs, summed over every
+    core. Less is better.
+  - Memory: the most memory the game held while its turns ran. Less is better.
+  - Frame rate: median of the average frame rate over the map scenes.
+  - Smoothness: the frame rate of the slowest 1% of frames in the game's worst scene.
+  - Data per turn: the most bytes one turn took over the network, both ways. Less is
+    better.
+  - Turn delivery: median time from a turn ending to its last byte reaching the clients.
+    Less is better.
+
+The runs
+--------
+
+  - Turn speed: gaps between Freeciv's per-turn "End/start-turn server/ai activities"
+    log lines (249 turns timed of 250 markers)
+  - Frame rate: not measured: Freeciv's client redraws only when something on the map
+    changes, so it has no steady frame rate to time
+  - Network: freeciv-server with 8 AI players and 2 freeciv-gtk4 clients on this
+    machine, each attached as a global observer, every byte through OJH's loopback
+    relay; a turn ends at the server's End/start-turn log line
+  - Footprint: install is the Freeciv folder the server runs from; the save is the
+    largest of Freeciv's own per-turn saves over 20 turns, in its default compression;
+    load time is freeciv-server started on that save minus the same server started
+    empty; Freeciv has no command to time a save, so save time is n/a
+  - Turn speed settings: 250 turns asked for, 249 timed, seed 20260914, 8 players chosen
+    by OJH
+  - Machine: Apple M1 Pro, macOS 26.3 (25D125)
+  - CPU reference score: 1,710 rounds/s on one core; CPU-bound figures were put on OJH's
+    reference CPU (1,000 rounds/s) with a factor of 0.585
+
+How the score is built
+----------------------
+
+  - Points: each part scores 1000 × log2(1 + value ÷ reference level): the reference
+    level is worth 1,000 points, three times it 2,000 and seven times it 3,000, and
+    nothing scores below zero. Where less is better, the ratio is turned around.
+  - Hardware: turn speed, start-up, CPU time and turn delivery are put on OJH's
+    reference CPU with the machine's single-core reference score (src/machine.c), so a
+    faster computer does not make a faster game. A game that uses more cores keeps that
+    advantage. Frame rate, memory and data are used as measured.
+  - Total: the weighted mean of the parts the results have. Coverage is how much of the
+    weight that was, here 80%; a part a game was not measured for is left out, never
+    counted as zero.
+  - Version: score version 2. Its parts, weights and reference levels are fixed in
+    src/score.c; any change makes a new version, and scores of different versions are
+    not compared.
+

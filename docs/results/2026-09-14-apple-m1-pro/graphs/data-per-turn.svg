@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 292" width="760" height="292" role="img" aria-label="Data per turn, lowest to highest">
+<title>Data per turn, lowest to highest</title>
+<rect width="760" height="292" fill="#FFFFFF"/>
+<text x="24" y="34" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="18" font-weight="600" fill="#1F2328">Data per turn, lowest to highest</text>
+<text x="24" y="56" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12.5" fill="#57606A">Both ways, all clients. The dot is the median turn. Less is better.</text>
+<g font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11.5" fill="#57606A"><line x1="24" y1="74" x2="52" y2="74" stroke="#57606A" stroke-width="4" stroke-linecap="round"/><text x="58" y="78">lowest to highest</text><circle cx="192.2" cy="74" r="5" fill="#FFFFFF" stroke="#1F2328" stroke-width="2"/><text x="202.2" y="78">median</text></g>
+<line x1="172.0" y1="90" x2="172.0" y2="252" stroke="#D8DEE4"/>
+<text x="172.0" y="268" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">9.77 KiB</text>
+<line x1="309.0" y1="90" x2="309.0" y2="252" stroke="#D8DEE4"/>
+<text x="309.0" y="268" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">97.7 KiB</text>
+<line x1="446.0" y1="90" x2="446.0" y2="252" stroke="#D8DEE4"/>
+<text x="446.0" y="268" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">977 KiB</text>
+<line x1="583.0" y1="90" x2="583.0" y2="252" stroke="#D8DEE4"/>
+<text x="583.0" y="268" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">9.54 MiB</text>
+<line x1="720.0" y1="90" x2="720.0" y2="252" stroke="#D8DEE4"/>
+<text x="720.0" y="268" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">95.4 MiB</text>
+<text x="720" y="284" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="end">log scale</text>
+<text x="160" y="119" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">Open Doctrines</text>
+<line x1="230.4" y1="115" x2="236.3" y2="115" stroke="#56B4E9" stroke-width="8" stroke-linecap="round"/>
+<circle cx="231.7" cy="115" r="6" fill="#FFFFFF" stroke="#1F2328" stroke-width="2"/>
+<text x="230.4" y="106" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="10.5" fill="#57606A" text-anchor="middle">26.1 KiB</text>
+<text x="236.3" y="135" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="10.5" fill="#57606A" text-anchor="middle">28.8 KiB</text>
+<text x="160" y="157" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">Unciv</text>
+<line x1="215.3" y1="153" x2="243.7" y2="153" stroke="#0072B2" stroke-width="8" stroke-linecap="round"/>
+<circle cx="229.6" cy="153" r="6" fill="#FFFFFF" stroke="#1F2328" stroke-width="2"/>
+<text x="215.3" y="144" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="10.5" fill="#57606A" text-anchor="middle">20.2 KiB</text>
+<text x="243.7" y="173" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="10.5" fill="#57606A" text-anchor="middle">32.6 KiB</text>
+<text x="160" y="195" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">Freeciv</text>
+<line x1="200.9" y1="191" x2="254.9" y2="191" stroke="#E69F00" stroke-width="8" stroke-linecap="round"/>
+<circle cx="237.5" cy="191" r="6" fill="#FFFFFF" stroke="#1F2328" stroke-width="2"/>
+<text x="200.9" y="182" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="10.5" fill="#57606A" text-anchor="middle">15.9 KiB</text>
+<text x="254.9" y="211" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="10.5" fill="#57606A" text-anchor="middle">39.3 KiB</text>
+<text x="160" y="233" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">Greater Diplomacy 5</text>
+<line x1="587.5" y1="229" x2="621.3" y2="229" stroke="#CC79A7" stroke-width="8" stroke-linecap="round"/>
+<circle cx="594.8" cy="229" r="6" fill="#FFFFFF" stroke="#1F2328" stroke-width="2"/>
+<text x="587.5" y="220" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="10.5" fill="#57606A" text-anchor="middle">10.3 MiB</text>
+<text x="621.3" y="249" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="10.5" fill="#57606A" text-anchor="middle">18.1 MiB</text>
+</svg>

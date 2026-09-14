@@ -15,6 +15,22 @@ games, measured the same way on the same machine:
 Nothing from any game is copied into this repository. Each game runs as its own
 program, installed from its own release, and is driven from the outside.
 
+## Results
+
+**[First results: four games on an Apple M1 Pro, 2026-09-14](docs/results/2026-09-14-apple-m1-pro/README.md)**
+(the [full report](docs/results/2026-09-14-apple-m1-pro/report.md) with graphs, every game's scorecard, and the raw result files).
+
+| Game | OJH score | Score covers |
+|---|---|---|
+| Open Doctrines | 2,599 | 96% of the weight |
+| Unciv 4.22.0 | 1,566 | 76% |
+| Freeciv | 1,435 (provisional) | 80% |
+| Greater Diplomacy 5 | 1,039 | 100% |
+
+Read the caveats on the results page before quoting a number. OJH and its drivers were
+written by the developer of Open Doctrines, and each game runs its own world. FreeOrion
+and FreeCol are not measured yet.
+
 ## What is measured
 
 Every number carries the machine it was measured on, the game version, the map,

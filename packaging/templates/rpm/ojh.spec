@@ -25,6 +25,7 @@ BuildRequires:  gcc
 %cmake_install
 
 %files
+%license LICENSE
 %{_bindir}/ojh
 %{_datadir}/ojh/
 %{_datadir}/doc/ojh/

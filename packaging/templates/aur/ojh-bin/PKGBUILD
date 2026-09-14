@@ -19,4 +19,5 @@ package() {
   mkdir -p "$pkgdir/usr/share"
   cp -r "$dir/share/ojh" "$pkgdir/usr/share/ojh"
   cp -r "$dir/share/doc" "$pkgdir/usr/share/doc"
+  install -Dm644 "$dir/share/doc/ojh/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

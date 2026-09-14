@@ -6,6 +6,7 @@ PublisherUrl: https://github.com/Pr1nted
 PackageName: Objective Judge Horizon
 PackageUrl: {{homepage}}
 License: {{license}}
+LicenseUrl: {{homepage}}/blob/main/LICENSE
 ShortDescription: "{{summary}}"
 Description: "{{description}}"
 Moniker: ojh

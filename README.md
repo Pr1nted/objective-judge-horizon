@@ -151,6 +151,10 @@ Once OJH has a public release, install it with your package manager:
 brew install Pr1nted/ojh/ojh
 ```
 
+On macOS, if a downloaded `ojh` will not open because Apple could not verify it, allow it
+once with `xattr -dr com.apple.quarantine "$(brew --caskroom)/ojh"` (or the unpacked
+folder).
+
 ```powershell
 winget install Pr1nted.ObjectiveJudgeHorizon
 ```
@@ -260,3 +264,7 @@ build/ojh relay 37015 127.0.0.1 27015 600 4
 relays a game server on port 27015 through port 37015 for ten minutes with four
 clients, and prints NIPM and DPT. Game runs write `results/<date>-<machine>/results.json`
 (every raw sample), `report.md` and `report.txt`.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

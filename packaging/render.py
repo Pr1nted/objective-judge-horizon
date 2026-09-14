@@ -21,7 +21,7 @@ def main():
     ap.add_argument("--dist", required=True, help="folder holding the release files")
     ap.add_argument("--base-url", required=True, help="where the release files are downloaded from")
     ap.add_argument("--out", required=True)
-    ap.add_argument("--license", default=os.environ.get("OJH_LICENSE", "LicenseRef-OJH-Pending"))
+    ap.add_argument("--license", default=os.environ.get("OJH_LICENSE") or "MIT")
     ap.add_argument("--homepage", default="https://github.com/Pr1nted/objective-judge-horizon")
     args = ap.parse_args()
 

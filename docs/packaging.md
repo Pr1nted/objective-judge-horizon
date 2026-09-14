@@ -66,16 +66,13 @@ release file was missing.
 
 - **The repository must be public.** Every manifest downloads from the GitHub release, and
   a private repository's release files cannot be downloaded without signing in.
-- **OJH needs a license.** Until one is chosen, the manifests say
-  `LicenseRef-OJH-Pending`. Once it is chosen, add a `LICENSE` file and set the
-  `OJH_LICENSE` repository variable to its SPDX identifier (for example `MIT`). The
-  release workflow writes that identifier into every manifest. winget, the AUR, nixpkgs,
-  MacPorts and Alpine will not accept a package without a real license.
-- **The Homebrew cask needs a binary signed and notarized with an Apple Developer ID.**
-  Without it, macOS refuses to open the downloaded `ojh` ("Apple could not verify ojh is
-  free of malware"). This was tested: the unsigned cask installs, then is killed on launch.
-  The Homebrew formula builds from source and needs no signing, so it is the one to
-  publish first.
+- **OJH is MIT licensed** (`LICENSE`). Every manifest says so, and the packages install
+  the license file.
+- **The macOS binary is not notarized.** The Homebrew formula builds from source and is
+  never blocked. The cask and the macOS archive are downloads, so macOS refuses to open
+  them at first ("Apple could not verify ojh is free of malware"). The cask prints the
+  fix after installing; it is also below. Homebrew's own `homebrew/cask` does not accept
+  unnotarized apps, so the cask lives in the OJH tap.
 - **winget and Chocolatey** review every new package by hand before it appears.
 
 ## Installing
@@ -84,6 +81,24 @@ After publishing:
 
 ```bash
 brew install Pr1nted/ojh/ojh
+```
+
+The prebuilt macOS binary instead of building from source:
+
+```bash
+brew install --cask Pr1nted/ojh/ojh
+```
+
+If macOS says it cannot verify `ojh`, allow it once:
+
+```bash
+xattr -dr com.apple.quarantine "$(brew --caskroom)/ojh"
+```
+
+For the macOS archive downloaded by hand, run the same command on the unpacked folder:
+
+```bash
+xattr -dr com.apple.quarantine ojh-0.1.0-macos-universal
 ```
 
 ```powershell

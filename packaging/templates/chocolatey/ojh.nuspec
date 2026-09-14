@@ -7,6 +7,7 @@
     <authors>Pr1nted</authors>
     <owners>Pr1nted</owners>
     <projectUrl>{{homepage}}</projectUrl>
+    <licenseUrl>{{homepage}}/blob/main/LICENSE</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <tags>benchmark games strategy cli</tags>
     <summary>{{summary}}</summary>

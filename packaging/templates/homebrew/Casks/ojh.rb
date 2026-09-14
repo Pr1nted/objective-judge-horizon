@@ -8,4 +8,10 @@ cask "ojh" do
   homepage "{{homepage}}"
 
   binary "ojh-#{version}-macos-universal/bin/ojh"
+
+  caveats <<~EOS
+    ojh is not notarized by Apple, so macOS may refuse to open it ("Apple could not verify ojh").
+    Allow it once with:
+      xattr -dr com.apple.quarantine "#{staged_path}"
+  EOS
 end

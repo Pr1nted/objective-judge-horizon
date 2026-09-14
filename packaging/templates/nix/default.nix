@@ -16,6 +16,7 @@ stdenv.mkDerivation rec {
   meta = with lib; {
     description = "{{summary}}";
     homepage = "{{homepage}}";
+    license = licenses.mit;
     platforms = platforms.unix;
     mainProgram = "ojh";
   };

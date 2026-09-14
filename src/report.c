@@ -7,6 +7,7 @@
 #include <time.h>
 
 #include "jsonread.h"
+#include "score.h"
 
 #define OJH_REPORT_VERSION "0.1.0"
 #define MAX_RESULTS 64
@@ -314,6 +315,260 @@ static int same_machine(const ojh_jvalue *a, const ojh_jvalue *b) {
            ojh_jnumber(ojh_jget(a, "memory_bytes"), -1) == ojh_jnumber(ojh_jget(b, "memory_bytes"), -2);
 }
 
+/* ---------------------------------------------------------------- scores */
+
+/* The game's name with its version when the result has one. */
+static void title_of(char *out, size_t n, const ojh_jvalue *root, const char *fallback) {
+    const ojh_jvalue *r = ojh_jget(root, "result");
+    const char *version = ojh_jstring(ojh_jget(r, "version"), "");
+    if (*version) snprintf(out, n, "%s (version %s)", ojh_jstring(ojh_jget(r, "name"), fallback), version);
+    else snprintf(out, n, "%s", ojh_jstring(ojh_jget(r, "name"), fallback));
+}
+
+static void safe_id(char *out, size_t n, const char *id) {
+    size_t i = 0;
+    for (; id[i] && i + 1 < n; i++) {
+        char ch = id[i];
+        if ((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '-' || ch == '_') out[i] = ch;
+        else if (ch >= 'A' && ch <= 'Z') out[i] = (char)(ch - 'A' + 'a');
+        else out[i] = '-';
+    }
+    out[i] = '\0';
+    if (i == 0) snprintf(out, n, "game");
+}
+
+static void xml_text(FILE *f, const char *s) {
+    for (; *s; s++) {
+        if (*s == '&') fputs("&amp;", f);
+        else if (*s == '<') fputs("&lt;", f);
+        else if (*s == '>') fputs("&gt;", f);
+        else if (*s == '"') fputs("&quot;", f);
+        else fputc(*s, f);
+    }
+}
+
+/* A badge for a README or a store page. */
+static int write_badge(const char *path, const ojh_score *s, const char *title) {
+    FILE *f = fopen(path, "wb");
+    if (!f) return -1;
+    char number[48], value[64];
+    grouped(number, sizeof number, s->total);
+    snprintf(value, sizeof value, "%s%s", number, s->provisional ? " provisional" : "");
+    const char *color = s->provisional ? "#8a6a1c" : "#2d6a8a";
+    int left = 72, right = 16 + 7 * (int)strlen(value), width = left + right;
+    fprintf(f, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"%d\" height=\"20\" role=\"img\" aria-label=\"OJH score: ", width);
+    xml_text(f, value);
+    fputs("\">\n  <title>", f);
+    xml_text(f, title);
+    fprintf(f, ": OJH score %s (score version %d)</title>\n", value, OJH_SCORE_VERSION);
+    fprintf(f, "  <rect width=\"%d\" height=\"20\" rx=\"3\" fill=\"#2b3440\"/>\n", width);
+    fprintf(f, "  <rect x=\"%d\" width=\"%d\" height=\"20\" rx=\"3\" fill=\"%s\"/>\n", left, right, color);
+    fprintf(f, "  <rect x=\"%d\" width=\"4\" height=\"20\" fill=\"%s\"/>\n", left, color);
+    fprintf(f, "  <g fill=\"#ffffff\" font-family=\"Verdana,DejaVu Sans,sans-serif\" font-size=\"11\" text-anchor=\"middle\">\n");
+    fprintf(f, "    <text x=\"%d\" y=\"14\">OJH score</text>\n    <text x=\"%d\" y=\"14\">", left / 2, left + right / 2);
+    xml_text(f, value);
+    fputs("</text>\n  </g>\n</svg>\n", f);
+    return fclose(f) == 0 ? 0 : -1;
+}
+
+static void part_figure(char *out, size_t n, const ojh_score_part *p, double v) {
+    if (strcmp(p->unit, "s") == 0) {
+        snprintf(out, n, "%.2f s", v);
+    } else if (v >= 100) {
+        char whole[48];
+        grouped(whole, sizeof whole, v);
+        snprintf(out, n, "%s %s", whole, p->unit);
+    } else {
+        snprintf(out, n, "%.2f", v);
+    }
+}
+
+static int write_scorecard(const char *dir, const ojh_jvalue *root, const ojh_score *s, char *base, size_t base_len) {
+    char id[64];
+    safe_id(id, sizeof id, s->id);
+    snprintf(base, base_len, "score-%s", id);
+    char md_path[4400], txt_path[4400], svg_path[4400];
+    snprintf(md_path, sizeof md_path, "%s/%s.md", dir, base);
+    snprintf(txt_path, sizeof txt_path, "%s/%s.txt", dir, base);
+    snprintf(svg_path, sizeof svg_path, "%s/%s.svg", dir, base);
+    out_pair o = {fopen(md_path, "wb"), fopen(txt_path, "wb")};
+    if (!o.md || !o.txt) {
+        if (o.md) fclose(o.md);
+        if (o.txt) fclose(o.txt);
+        return -1;
+    }
+    const ojh_jvalue *r = ojh_jget(root, "result");
+    const ojh_jvalue *settings = ojh_jget(root, "settings");
+    const ojh_jvalue *machine = ojh_jget(root, "machine");
+    char title[200], text[1200], number[48], a[48], b[48];
+    title_of(title, sizeof title, root, s->name);
+    snprintf(text, sizeof text, "%s: OJH score", title);
+    heading(&o, 1, text);
+
+    grouped(number, sizeof number, s->total);
+    fprintf(o.md, "**%s points**, OJH score version %d%s\n\n![OJH score %s](%s.svg)\n\n", number, OJH_SCORE_VERSION,
+            s->provisional ? ", provisional" : "", number, base);
+    snprintf(text, sizeof text, "%s points, OJH score version %d%s", number, OJH_SCORE_VERSION,
+             s->provisional ? ", provisional" : "");
+    wrap(o.txt, "", "", text);
+    fputc('\n', o.txt);
+    paragraph(&o, "This score is built from this game's own result file and nothing else. Every part is measured "
+                  "against a fixed reference level, not against other games, so adding, removing or re-running "
+                  "another game never changes it.");
+    if (s->reason_count) {
+        heading(&o, 2, s->provisional ? "Why it is provisional" : "Notes");
+        for (int i = 0; i < s->reason_count; i++) bullet(&o, NULL, s->reasons[i]);
+        end_list(&o);
+    }
+
+    heading(&o, 2, "Parts");
+    table *t = calloc(1, sizeof *t);
+    if (t) {
+        const char *header[] = {"Part", "Weight", "Measured", "On the reference CPU", "Worth 1,000 points", "Points"};
+        t->columns = 6;
+        for (int i = 0; i < t->columns; i++) set_cell(t, 0, i, header[i]);
+        for (int i = 0; i < s->part_count; i++) {
+            const ojh_score_part *p = &s->parts[i];
+            char cell[CELL];
+            set_cell(t, i + 1, 0, p->name);
+            snprintf(cell, sizeof cell, "%.0f%%", p->weight * 100);
+            set_cell(t, i + 1, 1, cell);
+            if (p->present) part_figure(cell, sizeof cell, p, p->measured);
+            else snprintf(cell, sizeof cell, "not reported");
+            set_cell(t, i + 1, 2, cell);
+            if (!p->present) snprintf(cell, sizeof cell, "n/a");
+            else if (p->hardware_adjusted) part_figure(cell, sizeof cell, p, p->value);
+            else if (p->value != p->measured) snprintf(cell, sizeof cell, "%.2f (capped)", p->value);
+            else snprintf(cell, sizeof cell, "same");
+            set_cell(t, i + 1, 3, cell);
+            part_figure(cell, sizeof cell, p, p->reference);
+            set_cell(t, i + 1, 4, cell);
+            if (p->present) grouped(cell, sizeof cell, p->points);
+            else snprintf(cell, sizeof cell, "n/a");
+            set_cell(t, i + 1, 5, cell);
+        }
+        t->rows = s->part_count + 1;
+        write_table(&o, t);
+        free(t);
+    }
+    heading(&o, 3, "What each part measures");
+    for (int i = 0; i < s->part_count; i++) {
+        const ojh_score_part *p = &s->parts[i];
+        snprintf(text, sizeof text, "%s.%s", p->measures, p->lower_is_better ? " Less is better." : "");
+        bullet(&o, p->name, text);
+    }
+    end_list(&o);
+
+    heading(&o, 2, "The run");
+    const char *license = ojh_jstring(ojh_jget(r, "license"), "");
+    const char *homepage = ojh_jstring(ojh_jget(r, "homepage"), "");
+    if (*license || *homepage) {
+        snprintf(text, sizeof text, "%s%s%s%s%s", title, *license ? ", " : "", license, *homepage ? ", " : "", homepage);
+        bullet(&o, "Game", text);
+    }
+    bullet(&o, "Measured", ojh_jstring(ojh_jget(r, "how"), "not recorded"));
+    const ojh_jvalue *chosen = ojh_jget(settings, "players_chosen");
+    if (ojh_jpresent(chosen) && chosen->number != 0) {
+        snprintf(a, sizeof a, "%.0f players chosen by OJH", ojh_jnumber(ojh_jget(settings, "players_requested"), 0));
+    } else {
+        snprintf(a, sizeof a, "players set by the game");
+    }
+    snprintf(text, sizeof text, "%.0f turns asked for, %d timed, seed %.0f, %s", ojh_jnumber(ojh_jget(settings, "turns_requested"), 0),
+             s->turns, ojh_jnumber(ojh_jget(settings, "seed"), 0), a);
+    bullet(&o, "Settings", text);
+    snprintf(text, sizeof text, "%s, %s", ojh_jstring(ojh_jget(machine, "cpu"), "unknown CPU"), ojh_jstring(ojh_jget(machine, "os"), "unknown OS"));
+    bullet(&o, "Machine", text);
+    if (s->hardware_known) {
+        grouped_or_na(a, sizeof a, ojh_jpath(machine, "reference.single_core_rounds_per_second"));
+        grouped(b, sizeof b, 1000);
+        snprintf(text, sizeof text, "%s rounds/s on one core; speeds were multiplied by %.3f to put them on OJH's "
+                                    "reference CPU (%s rounds/s)", a, s->hardware_factor, b);
+        bullet(&o, "CPU reference score", text);
+    }
+    end_list(&o);
+
+    heading(&o, 2, "How the score is built");
+    bullet(&o, "Points", "each part scores 1000 × log2(1 + value ÷ reference level): the reference level is worth 1,000 "
+                         "points, three times it 2,000 and seven times it 3,000, and nothing scores below zero. For "
+                         "start-up, where less is better, the ratio is turned around.");
+    bullet(&o, "Hardware", "speeds and start-up are put on OJH's reference CPU with the machine's single-core reference "
+                           "score (src/machine.c), so a faster computer does not make a faster game. A game that uses "
+                           "more cores keeps that advantage.");
+    snprintf(text, sizeof text, "the weighted mean of the parts the result has. Coverage is how much of the weight that "
+                                "was, here %.0f%%; a part a game does not report is left out, never counted as zero.",
+             s->coverage * 100);
+    bullet(&o, "Total", text);
+    snprintf(text, sizeof text, "score version %d. Its parts, weights and reference levels are fixed in src/score.c; "
+                                "any change makes a new version, and scores of different versions are not compared. "
+                                "FPS, network and memory join as parts when OJH measures them.", OJH_SCORE_VERSION);
+    bullet(&o, "Version", text);
+    end_list(&o);
+
+    int ok = fclose(o.md) == 0;
+    ok &= fclose(o.txt) == 0;
+    ok &= write_badge(svg_path, s, title) == 0;
+    return ok ? 0 : -1;
+}
+
+static void scores_section(out_pair *o, const collection *c) {
+    heading(o, 2, "OJH scores");
+    paragraph(o, "Each game's score is its own: it is built from that game's result file alone, against fixed "
+                 "reference levels, so no game's score depends on which other games are in this report. Each "
+                 "scorecard next to this report shows every part, and has a badge (.svg) to go with it.");
+    table *t = calloc(1, sizeof *t);
+    if (!t) return;
+    const char *header[] = {"Game", "OJH score", "Coverage", "Status", "Scorecard"};
+    t->columns = 5;
+    for (int i = 0; i < t->columns; i++) set_cell(t, 0, i, header[i]);
+    int rows = 1, provisional = 0;
+    for (int i = 0; i < c->count && rows < MAX_ROWS; i++) {
+        ojh_score s;
+        if (ojh_score_result(c->items[i].root, &s) != 0) continue;
+        char base[128], cell[CELL];
+        int written = write_scorecard(c->dir, c->items[i].root, &s, base, sizeof base) == 0;
+        title_of(cell, sizeof cell, c->items[i].root, s.name);
+        set_cell(t, rows, 0, cell);
+        grouped(cell, sizeof cell, s.total);
+        set_cell(t, rows, 1, cell);
+        snprintf(cell, sizeof cell, "%.0f%%", s.coverage * 100);
+        set_cell(t, rows, 2, cell);
+        set_cell(t, rows, 3, s.provisional ? "provisional" : "final");
+        snprintf(cell, sizeof cell, "%s.md", base);
+        set_cell(t, rows, 4, written ? cell : "not written");
+        provisional += s.provisional;
+        rows++;
+    }
+    t->rows = rows;
+    if (rows == 1) paragraph(o, "No results here can be scored.");
+    else write_table(o, t);
+    free(t);
+    if (provisional) {
+        paragraph(o, "A provisional score comes from a run too short or incomplete to stand behind; its scorecard says "
+                     "why. Measure again before publishing it.");
+    }
+}
+
+int ojh_scorecard_write(const char *result_path, const char *dir, char *written, size_t written_len, char *error,
+                        size_t error_len) {
+    char why[256];
+    ojh_jvalue *root = ojh_jparse_file(result_path, why, sizeof why);
+    if (!root) {
+        if (error && error_len) snprintf(error, error_len, "cannot read %s: %s", result_path, why);
+        return -1;
+    }
+    ojh_score s;
+    int status = -1;
+    if (ojh_score_result(root, &s) != 0) {
+        if (error && error_len) snprintf(error, error_len, "%s is not a result OJH can score", result_path);
+    } else if (write_scorecard(dir, root, &s, written, written_len) != 0) {
+        if (error && error_len) snprintf(error, error_len, "cannot write the scorecard in %s", dir);
+    } else {
+        status = 0;
+    }
+    ojh_jfree(root);
+    return status;
+}
+
 static void tpm_section(out_pair *o, const collection *c) {
     heading(o, 2, "TPM: turns per minute");
     paragraph(o, "How many complete turns each game plays in one minute with every player controlled by its own AI. "
@@ -338,7 +593,8 @@ static void tpm_section(out_pair *o, const collection *c) {
         int turns = (int)ojh_jnumber(ojh_jget(r, "turns"), 0);
         int players = (int)ojh_jnumber(ojh_jget(r, "players"), 0);
 
-        set_cell(t, rows, 0, ojh_jstring(ojh_jget(r, "name"), c->items[i].name));
+        title_of(buf, sizeof buf, root, c->items[i].name);
+        set_cell(t, rows, 0, buf);
         grouped(buf, sizeof buf, turns);
         set_cell(t, rows, 1, buf);
         if (turns > 0 && number_present(ojh_jget(r, "tpm"))) grouped_decimal(buf, sizeof buf, ojh_jget(r, "tpm")->number, 1);
@@ -493,6 +749,7 @@ int ojh_report_write(const char *dir, char *error, size_t error_len) {
     int same = 1;
     for (int i = 1; i < c->count; i++) same &= same_machine(machine, ojh_jget(c->items[i].root, "machine"));
     machine_section(&o, machine, same);
+    scores_section(&o, c);
     tpm_section(&o, c);
 
     fclose(o.md);

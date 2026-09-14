@@ -15,8 +15,8 @@ static const struct {
     {"unciv", "Unciv"},
 };
 
-const char *ojh_game_id(ojh_game g) { return g < OJH_GAME_COUNT ? GAMES[g].id : "?"; }
-const char *ojh_game_name(ojh_game g) { return g < OJH_GAME_COUNT ? GAMES[g].name : "?"; }
+const char *ojh_game_id(ojh_game g) { return g < OJH_GAME_COUNT ? GAMES[g].id : g == OJH_GAME_CUSTOM ? "custom" : "?"; }
+const char *ojh_game_name(ojh_game g) { return g < OJH_GAME_COUNT ? GAMES[g].name : g == OJH_GAME_CUSTOM ? "Custom game" : "?"; }
 
 int ojh_game_parse(const char *id, ojh_game *out) {
     for (int g = 0; g < OJH_GAME_COUNT; g++) {
@@ -56,6 +56,8 @@ static void push_turn(ojh_tpm *t, double seconds) {
 static void reset(ojh_game game, ojh_tpm *t) {
     memset(t, 0, sizeof *t);
     t->game = game;
+    snprintf(t->id, sizeof t->id, "%s", ojh_game_id(game));
+    snprintf(t->name, sizeof t->name, "%s", ojh_game_name(game));
     t->boot_seconds = -1;
     t->exit_code = -1;
 }
@@ -144,6 +146,106 @@ static int parse_opendoctrines(const ojh_line *lines, size_t count, ojh_tpm *t) 
     return t->turns > 0 ? 0 : -1;
 }
 
+/* Where "OJH " starts a protocol word in a line: at the start, or after a space, tab, ']'
+   or ':' so a logger's prefix ("[12:00:01] OJH turn 3") does not hide it. */
+static const char *protocol_word(const char *s) {
+    for (const char *p = strstr(s, "OJH "); p; p = strstr(p + 1, "OJH ")) {
+        if (p == s || p[-1] == ' ' || p[-1] == '\t' || p[-1] == ']' || p[-1] == ':') return p + 4;
+    }
+    return NULL;
+}
+
+static int word_is(const char *w, const char *word) {
+    size_t n = strlen(word);
+    return strncmp(w, word, n) == 0 && (w[n] == '\0' || w[n] == ' ' || w[n] == '\r');
+}
+
+static void copy_identity(const ojh_gamespec *spec, ojh_tpm *t) {
+    snprintf(t->id, sizeof t->id, "%s", spec->id);
+    snprintf(t->name, sizeof t->name, "%s", spec->name);
+    snprintf(t->version, sizeof t->version, "%s", spec->version);
+    snprintf(t->license, sizeof t->license, "%s", spec->license);
+    snprintf(t->homepage, sizeof t->homepage, "%s", spec->homepage);
+}
+
+int ojh_tpm_parse_spec(const ojh_gamespec *spec, const ojh_line *lines, size_t count, ojh_tpm *t) {
+    reset(OJH_GAME_CUSTOM, t);
+    copy_identity(spec, t);
+    int markers = 0, reported_times = 0;
+    double previous = -1;
+    for (size_t i = 0; i < count; i++) {
+        const char *s = lines[i].text;
+        double v;
+        if (spec->turns_from == OJH_TURNS_PROTOCOL) {
+            const char *w = protocol_word(s);
+            if (!w) continue;
+            if (word_is(w, "ready")) {
+                if (t->boot_seconds < 0) t->boot_seconds = lines[i].t;
+                previous = lines[i].t;
+            } else if (word_is(w, "turn")) {
+                int n = 0;
+                double seconds = 0;
+                int got = sscanf(w + 4, "%d %lf", &n, &seconds);
+                markers++;
+                if (got == 2 && seconds >= 0) {
+                    push_turn(t, seconds); /* the game timed its own turn */
+                    reported_times++;
+                } else if (got >= 1 && previous >= 0) {
+                    push_turn(t, lines[i].t - previous);
+                } else if (got >= 1 && t->boot_seconds < 0) {
+                    t->boot_seconds = lines[i].t; /* no ready line: the first turn line starts the clock */
+                }
+                previous = lines[i].t;
+            } else if (word_is(w, "players")) {
+                int n = atoi(w + 7);
+                if (n > 0) t->players = n;
+            } else if (word_is(w, "regions")) {
+                char kind[16] = "";
+                long n = 0;
+                if (sscanf(w + 7, "%ld %15s", &n, kind) >= 1 && n > 0) {
+                    t->regions = n;
+                    if (*kind) snprintf(t->region_kind, sizeof t->region_kind, "%s", kind);
+                }
+            }
+            continue;
+        }
+        if (spec->players_after && number_after(s, spec->players_after, &v) && v > 0) t->players = (int)v;
+        if (spec->regions_after && number_after(s, spec->regions_after, &v) && v > 0) t->regions = (long)v;
+        if (spec->stream != OJH_STREAM_EITHER && lines[i].stream != spec->stream) continue;
+        if (spec->game_starts && t->boot_seconds < 0 && strstr(s, spec->game_starts)) {
+            t->boot_seconds = lines[i].t;
+            previous = lines[i].t;
+        }
+        if (strstr(s, spec->turn_ends)) {
+            markers++;
+            if (previous >= 0) push_turn(t, lines[i].t - previous);
+            else t->boot_seconds = lines[i].t; /* no start line: the first marker starts the clock */
+            previous = lines[i].t;
+        }
+    }
+    if (spec->turns_from == OJH_TURNS_PROTOCOL && (spec->players_after || spec->regions_after)) {
+        for (size_t i = 0; i < count; i++) {
+            double v;
+            if (spec->players_after && !t->players && number_after(lines[i].text, spec->players_after, &v) && v > 0) t->players = (int)v;
+            if (spec->regions_after && !t->regions && number_after(lines[i].text, spec->regions_after, &v) && v > 0) t->regions = (long)v;
+        }
+    }
+    if (!t->players) t->players = spec->players;
+    if (!t->regions) t->regions = spec->regions;
+    if (!*t->region_kind) snprintf(t->region_kind, sizeof t->region_kind, "%s", *spec->region_kind ? spec->region_kind : "regions");
+    t->turns = t->timed_turns;
+    if (spec->turns_from == OJH_TURNS_PROTOCOL) {
+        snprintf(t->how, sizeof t->how, "%s's own \"OJH turn\" lines, %s (%d turns timed of %d turn lines)", t->name,
+                 reported_times == t->timed_turns && reported_times > 0 ? "each carrying the game's own time for its turn"
+                 : reported_times > 0 ? "partly with the game's own turn times and partly the gaps between lines"
+                                      : "the gaps between them", t->timed_turns, markers);
+    } else {
+        snprintf(t->how, sizeof t->how, "gaps between %s's \"%.80s\" lines (%d turns timed of %d markers)", t->name,
+                 spec->turn_ends, t->timed_turns, markers);
+    }
+    return t->turns > 0 ? 0 : -1;
+}
+
 int ojh_tpm_parse(ojh_game game, const ojh_line *lines, size_t count, ojh_tpm *out) {
     reset(game, out);
     switch (game) {
@@ -183,8 +285,8 @@ static int fail(char *error, size_t len, const char *message) {
 }
 
 /* Runs argv to completion and parses what it printed. */
-static int run_and_parse(ojh_game game, const char *const *argv, const char *const *env, const char *cwd,
-                         double timeout, ojh_tpm *out, char *error, size_t error_len) {
+static int run_and_parse(ojh_game game, const ojh_gamespec *spec, const char *const *argv, const char *const *env,
+                         const char *cwd, double timeout, ojh_tpm *out, char *error, size_t error_len) {
     double t0 = ojh_now();
     ojh_run *r = ojh_run_start(argv, env, cwd);
     if (!r) return fail(error, error_len, "the program did not start (is the path right?)");
@@ -197,7 +299,7 @@ static int run_and_parse(ojh_game game, const char *const *argv, const char *con
         return fail(error, error_len, "out of memory");
     }
     for (size_t i = 0; i < count; i++) lines[i] = *ojh_run_line(r, i);
-    int parsed = ojh_tpm_parse(game, lines, count, out);
+    int parsed = spec ? ojh_tpm_parse_spec(spec, lines, count, out) : ojh_tpm_parse(game, lines, count, out);
     out->exit_code = code;
     out->wall_seconds = wall;
     if (parsed != 0 && error && error_len) {
@@ -226,7 +328,7 @@ int ojh_tpm_run(ojh_game game, const ojh_tpm_options *o, ojh_tpm *out, char *err
         case OJH_GAME_OPENDOCTRINES: {
             if (!o->od_server || !o->od_data) return fail(error, error_len, "needs --od-server and --od-data");
             const char *argv[] = {o->od_server, "--eval-ai", "1", turns, seed, "2", "--data", o->od_data, NULL};
-            return run_and_parse(game, argv, NULL, NULL, timeout, out, error, error_len);
+            return run_and_parse(game, NULL, argv, NULL, NULL, timeout, out, error, error_len);
         }
         case OJH_GAME_GD5: {
             if (!o->gd5_python || !o->gd5_dir || !o->drivers_dir) {
@@ -235,7 +337,7 @@ int ojh_tpm_run(ojh_game game, const ojh_tpm_options *o, ojh_tpm *out, char *err
             char driver[4096];
             join_path(driver, sizeof driver, o->drivers_dir, "gd5_tpm.py");
             const char *argv[] = {o->gd5_python, driver, "--gd5", o->gd5_dir, "--turns", turns, NULL};
-            return run_and_parse(game, argv, NULL, NULL, timeout, out, error, error_len);
+            return run_and_parse(game, NULL, argv, NULL, NULL, timeout, out, error, error_len);
         }
         case OJH_GAME_FREECIV: {
             if (!o->freeciv_server || !o->work_dir) return fail(error, error_len, "needs --freeciv-server and --work");
@@ -255,7 +357,7 @@ int ojh_tpm_run(ojh_game game, const ojh_tpm_options *o, ojh_tpm *out, char *err
             fclose(f);
             const char *argv[] = {o->freeciv_server, "-e", "-p", "55600", "-s", saves, "-r", script, "-d", "v", NULL};
             const char *env[] = {"LC_ALL=C", "LANG=C", NULL};
-            return run_and_parse(game, argv, env, dir, timeout, out, error, error_len);
+            return run_and_parse(game, NULL, argv, env, dir, timeout, out, error, error_len);
         }
         case OJH_GAME_UNCIV: {
             if (!o->unciv_jar || !o->java || !o->javac || !o->jar_tool || !o->drivers_dir || !o->work_dir) {
@@ -288,11 +390,88 @@ int ojh_tpm_run(ojh_game game, const ojh_tpm_options *o, ojh_tpm *out, char *err
 #endif
             const char *argv[] = {o->java, "-Djava.awt.headless=true", "-cp", classpath, "UncivTpm", players, turns,
                                   "small", NULL};
-            return run_and_parse(game, argv, NULL, assets, timeout, out, error, error_len);
+            return run_and_parse(game, NULL, argv, NULL, assets, timeout, out, error, error_len);
         }
         default:
             return fail(error, error_len, "unknown game");
     }
+}
+
+static void ignore_name(const char *name, void *user) {
+    (void)name;
+    (void)user;
+}
+
+int ojh_tpm_run_spec(const ojh_gamespec *spec, const ojh_tpm_options *o, ojh_tpm *out, char *error,
+                     size_t error_len) {
+    reset(OJH_GAME_CUSTOM, out);
+    copy_identity(spec, out);
+    ojh_spec_values values = {o->turns, o->seed, o->players, o->work_dir, o->ojh_path};
+    int status = -1;
+    char **argv = calloc((size_t)spec->command_count + 1, sizeof *argv);
+    char **env = calloc((size_t)spec->environment_count + 1, sizeof *env);
+    char *cwd = NULL;
+    if (!argv || !env) {
+        fail(error, error_len, "out of memory");
+        goto done;
+    }
+    for (int i = 0; i < spec->command_count; i++) {
+        char *filled = ojh_gamespec_expand(spec->command[i], spec, &values);
+        if (!filled) {
+            fail(error, error_len, "out of memory");
+            goto done;
+        }
+        if (i == 0) {
+            /* "./MyGame" is next to the spec; "python3" is found on PATH. */
+            argv[0] = ojh_gamespec_path(spec, filled, 1);
+            free(filled);
+            if (!argv[0]) {
+                fail(error, error_len, "out of memory");
+                goto done;
+            }
+        } else {
+            argv[i] = filled;
+        }
+    }
+    for (int i = 0; i < spec->environment_count; i++) {
+        env[i] = ojh_gamespec_expand(spec->environment[i], spec, &values);
+        if (!env[i]) {
+            fail(error, error_len, "out of memory");
+            goto done;
+        }
+    }
+    if (spec->working_directory) {
+        char *filled = ojh_gamespec_expand(spec->working_directory, spec, &values);
+        cwd = filled ? ojh_gamespec_path(spec, filled, 0) : NULL;
+        free(filled);
+    } else {
+        cwd = ojh_gamespec_path(spec, ".", 0);
+    }
+    if (!cwd) {
+        fail(error, error_len, "out of memory");
+        goto done;
+    }
+    if (o->work_dir) ojh_make_dir(o->work_dir);
+    if (ojh_list_dir(cwd, ignore_name, NULL) != 0) {
+        fail(error, error_len, "the game's working folder does not exist");
+        if (error && error_len) snprintf(error, error_len, "the game's working folder %s does not exist", cwd);
+        goto done;
+    }
+    double timeout = o->timeout_seconds > 0 ? o->timeout_seconds : spec->timeout_seconds;
+    status = run_and_parse(OJH_GAME_CUSTOM, spec, (const char *const *)argv, (const char *const *)env, cwd, timeout,
+                           out, error, error_len);
+    if (status != 0 && out->exit_code == -1 && error && !*error) fail(error, error_len, "the game did not start");
+done:
+    if (argv) {
+        for (int i = 0; i < spec->command_count; i++) free(argv[i]);
+        free(argv);
+    }
+    if (env) {
+        for (int i = 0; i < spec->environment_count; i++) free(env[i]);
+        free(env);
+    }
+    free(cwd);
+    return status;
 }
 
 /* ---------------------------------------------------------------- results */
@@ -322,8 +501,14 @@ static double median_of(const double *values, int from, int to) {
 void ojh_tpm_json(ojh_json *w, const ojh_tpm *t) {
     double tpm = ojh_tpm_value(t);
     ojh_json_object(w);
-    ojh_json_key(w, "game"); ojh_json_string(w, ojh_game_id(t->game));
-    ojh_json_key(w, "name"); ojh_json_string(w, ojh_game_name(t->game));
+    ojh_json_key(w, "game"); ojh_json_string(w, *t->id ? t->id : ojh_game_id(t->game));
+    ojh_json_key(w, "name"); ojh_json_string(w, *t->name ? t->name : ojh_game_name(t->game));
+    if (t->game == OJH_GAME_CUSTOM) {
+        ojh_json_key(w, "from_spec"); ojh_json_bool(w, 1);
+        ojh_json_key(w, "version"); if (*t->version) ojh_json_string(w, t->version); else ojh_json_null(w);
+        ojh_json_key(w, "license"); if (*t->license) ojh_json_string(w, t->license); else ojh_json_null(w);
+        ojh_json_key(w, "homepage"); if (*t->homepage) ojh_json_string(w, t->homepage); else ojh_json_null(w);
+    }
     ojh_json_key(w, "exit_code"); ojh_json_int(w, t->exit_code);
     ojh_json_key(w, "turns"); ojh_json_int(w, t->turns);
     ojh_json_key(w, "play_seconds"); ojh_json_double(w, t->play_seconds, 3);

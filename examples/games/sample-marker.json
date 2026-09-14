@@ -1,0 +1,24 @@
+{
+  "ojh_game_spec": 1,
+  "id": "sample-marker",
+  "name": "OJH sample game (marker)",
+  "version": "1",
+  "license": "same as OJH",
+  "notes": [
+    "The same stand-in game printing ordinary log lines, for a game you cannot change.",
+    "OJH times the gaps between lines containing turn_ends and reads the counts out of the start-up line."
+  ],
+  "command": ["{ojh}", "selftest", "sample-game", "{turns}", "{players}", "plain"],
+  "environment": {"LC_ALL": "C"},
+  "turns": {
+    "from": "marker",
+    "game_starts": "World ready",
+    "turn_ends": "finished",
+    "stream": "stdout",
+    "players_after": "ready with ",
+    "regions_after": "nations and "
+  },
+  "region_kind": "provinces",
+  "default_turns": 50,
+  "timeout_seconds": 120
+}

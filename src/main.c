@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "gamespec.h"
 #include "json.h"
 #include "jsonread.h"
 #include "machine.h"
@@ -15,6 +16,7 @@
 #include "procmeter.h"
 #include "report.h"
 #include "runner.h"
+#include "score.h"
 #include "sha256.h"
 #include "tpm.h"
 
@@ -27,13 +29,17 @@ static int usage(void) {
           "  ojh machine [seconds]                  this machine's profile and CPU reference score\n"
           "  ojh relay <listen> <host> <port> <seconds> [clients]\n"
           "                                         count a netcode's traffic on loopback\n"
-          "  ojh tpm <opendoctrines|gd5|freeciv|unciv> [--turns N] [--seed S] [--players P] [--timeout S]\n"
+          "  ojh tpm <opendoctrines|gd5|freeciv|unciv|your-game.json> [--turns N] [--seed S] [--players P] [--timeout S]\n"
           "          [--od-server PATH --od-data DIR] [--gd5-python PATH --gd5-dir DIR]\n"
           "          [--freeciv-server PATH] [--unciv-jar PATH --java PATH --javac PATH --jar PATH]\n"
           "          [--drivers DIR] [--work DIR] [--out FILE]\n"
           "                                         turns per minute, every player AI\n"
-          "  ojh report <folder>                    report.md and report.txt from the result files in a folder\n"
-          "  ojh selftest sha256|json|jsonread|relay|procmeter|runner|tpm|report\n",
+          "  ojh report <folder>                    report.md and report.txt, and every game's scorecard, from the\n"
+          "                                         result files in a folder\n"
+          "  ojh score <result.json>... [--out DIR] each game's own OJH score and scorecard\n"
+          "  ojh spec new <your-game.json>          a game spec to fill in, for putting your own game through OJH\n"
+          "  ojh spec check <your-game.json>        what OJH will run for that spec\n"
+          "  ojh selftest sha256|json|jsonread|relay|procmeter|runner|tpm|report|spec|score\n",
           stderr);
     return 2;
 }
@@ -73,13 +79,39 @@ static int cmd_relay(int argc, char **argv) {
     return 0;
 }
 
+static int ends_with(const char *s, const char *suffix) {
+    size_t n = strlen(s), k = strlen(suffix);
+    return n >= k && strcmp(s + n - k, suffix) == 0;
+}
+
+/* The folder a file is in: "." when the path has none. */
+static void folder_of(char *out, size_t n, const char *path) {
+    snprintf(out, n, "%s", path);
+    char *slash = strrchr(out, '/'), *backslash = strrchr(out, '\\');
+    if (backslash && (!slash || backslash > slash)) slash = backslash;
+    if (slash) *slash = '\0';
+    else snprintf(out, n, ".");
+    if (!*out) snprintf(out, n, "/");
+}
+
 static int cmd_tpm(int argc, char **argv) {
     if (argc < 3) return usage();
-    ojh_game game;
-    if (ojh_game_parse(argv[2], &game) != 0) {
-        fprintf(stderr, "tpm: unknown game '%s'\n", argv[2]);
+    ojh_game game = OJH_GAME_CUSTOM;
+    ojh_gamespec spec;
+    memset(&spec, 0, sizeof spec);
+    int from_spec = ends_with(argv[2], ".json");
+    if (from_spec) {
+        char why[1024];
+        if (ojh_gamespec_load(argv[2], &spec, why, sizeof why) != 0) {
+            fprintf(stderr, "tpm: %s\n", why);
+            return 2;
+        }
+    } else if (ojh_game_parse(argv[2], &game) != 0) {
+        fprintf(stderr, "tpm: unknown game '%s' (give opendoctrines, gd5, freeciv or unciv, or your own game's spec file "
+                        "ending in .json: see docs/adding-your-game.md)\n", argv[2]);
         return 2;
     }
+    const char *name = from_spec ? spec.name : ojh_game_name(game);
     const char *tmp = getenv("TMPDIR");
     if (!tmp) tmp = getenv("TEMP");
     if (!tmp) tmp = ".";
@@ -88,16 +120,18 @@ static int cmd_tpm(int argc, char **argv) {
 
     ojh_tpm_options o;
     memset(&o, 0, sizeof o);
-    o.turns = game == OJH_GAME_OPENDOCTRINES ? 500 : 100;
+    o.turns = from_spec ? spec.default_turns : game == OJH_GAME_OPENDOCTRINES ? 500 : 100;
     o.seed = 20260914u;
     o.players = 8;
-    o.timeout_seconds = 3600;
+    o.timeout_seconds = from_spec ? 0 : 3600; /* 0: the spec's own */
     o.freeciv_server = "freeciv-server";
     o.java = "java";
     o.javac = "javac";
     o.jar_tool = "jar";
     o.drivers_dir = "drivers";
     o.work_dir = work;
+    static char self[1024];
+    if (ojh_self_path(self, sizeof self) == 0) o.ojh_path = self;
     const char *out_path = NULL;
     for (int i = 3; i < argc; i += 2) {
         const char *a = argv[i];
@@ -134,11 +168,12 @@ static int cmd_tpm(int argc, char **argv) {
     ojh_machine_read(&m);
     fprintf(stderr, "tpm: measuring this machine's reference score\n");
     ojh_reference_measure(&ref, 3.0);
-    fprintf(stderr, "tpm: %s for %d turns\n", ojh_game_name(game), o.turns);
+    fprintf(stderr, "tpm: %s for %d turns\n", name, o.turns);
 
     ojh_tpm result;
     char error[1024] = "";
-    int status = ojh_tpm_run(game, &o, &result, error, sizeof error);
+    int status = from_spec ? ojh_tpm_run_spec(&spec, &o, &result, error, sizeof error)
+                           : ojh_tpm_run(game, &o, &result, error, sizeof error);
 
     FILE *out = out_path ? fopen(out_path, "wb") : stdout;
     if (!out) {
@@ -159,7 +194,11 @@ static int cmd_tpm(int argc, char **argv) {
     ojh_json_key(&w, "players_requested"); ojh_json_int(&w, o.players);
     /* OJH sets the player count for Freeciv (aifill) and Unciv (civilizations); GD5's scenario
        and Open Doctrines' generated world set their own. */
-    ojh_json_key(&w, "players_chosen"); ojh_json_bool(&w, game == OJH_GAME_FREECIV || game == OJH_GAME_UNCIV);
+    ojh_json_key(&w, "players_chosen");
+    ojh_json_bool(&w, from_spec ? spec.players_chosen : game == OJH_GAME_FREECIV || game == OJH_GAME_UNCIV);
+    if (from_spec) {
+        ojh_json_key(&w, "spec"); ojh_json_string(&w, argv[2]);
+    }
     ojh_json_end_object(&w);
     ojh_json_key(&w, "result"); ojh_tpm_json(&w, &result);
     ojh_json_key(&w, "error");
@@ -168,12 +207,23 @@ static int cmd_tpm(int argc, char **argv) {
     ojh_json_end_object(&w);
     if (out != stdout) fclose(out);
     if (status == 0) {
-        fprintf(stderr, "tpm: %s played %d turns in %.2f s: %.1f turns per minute\n", ojh_game_name(game),
-                result.turns, result.play_seconds, ojh_tpm_value(&result));
+        fprintf(stderr, "tpm: %s played %d turns in %.2f s: %.1f turns per minute\n", name, result.turns,
+                result.play_seconds, ojh_tpm_value(&result));
     } else {
-        fprintf(stderr, "tpm: %s failed: %s\n", ojh_game_name(game), error);
+        fprintf(stderr, "tpm: %s failed: %s\n", name, error);
+    }
+    if (out_path) {
+        char why[256];
+        ojh_jvalue *root = ojh_jparse_file(out_path, why, sizeof why);
+        ojh_score s;
+        if (root && ojh_score_result(root, &s) == 0) {
+            fprintf(stderr, "tpm: OJH score %.0f (%s, %.0f%% coverage); ojh score %s writes its scorecard\n", s.total,
+                    s.provisional ? "provisional" : "final", s.coverage * 100, out_path);
+        }
+        if (root) ojh_jfree(root);
     }
     ojh_tpm_free(&result);
+    ojh_gamespec_free(&spec);
     return status == 0 ? 0 : 1;
 }
 
@@ -185,6 +235,124 @@ static int cmd_report(int argc, char **argv) {
         return 1;
     }
     fprintf(stderr, "report: wrote %s/report.md and %s/report.txt\n", argv[2], argv[2]);
+    return 0;
+}
+
+static int cmd_score(int argc, char **argv) {
+    const char *out_dir = NULL;
+    int files = 0, failures = 0;
+    for (int i = 2; i < argc; i++) {
+        if (strcmp(argv[i], "--out") == 0) {
+            if (i + 1 >= argc) return usage();
+            out_dir = argv[++i];
+        } else {
+            files++;
+        }
+    }
+    if (files == 0) return usage();
+    if (out_dir) ojh_make_dir(out_dir);
+    ojh_json w;
+    ojh_json_init(&w, stdout);
+    ojh_json_array(&w);
+    for (int i = 2; i < argc; i++) {
+        if (strcmp(argv[i], "--out") == 0) {
+            i++;
+            continue;
+        }
+        char error[1024] = "", folder[4096], written[128];
+        ojh_jvalue *root = ojh_jparse_file(argv[i], error, sizeof error);
+        ojh_score s;
+        if (!root || ojh_score_result(root, &s) != 0) {
+            fprintf(stderr, "score: %s is not a result OJH can score%s%s\n", argv[i], *error ? ": " : "", error);
+            if (root) ojh_jfree(root);
+            failures++;
+            continue;
+        }
+        ojh_jfree(root);
+        ojh_score_json(&w, &s);
+        folder_of(folder, sizeof folder, argv[i]);
+        const char *dir = out_dir ? out_dir : folder;
+        if (ojh_scorecard_write(argv[i], dir, written, sizeof written, error, sizeof error) != 0) {
+            fprintf(stderr, "score: %s\n", error);
+            failures++;
+            continue;
+        }
+        fprintf(stderr, "score: %s %.0f (%s, %.0f%% coverage) -> %s/%s.md, .txt and .svg\n", s.name, s.total,
+                s.provisional ? "provisional" : "final", s.coverage * 100, dir, written);
+    }
+    ojh_json_end_array(&w);
+    return failures ? 1 : 0;
+}
+
+static void print_argument(const char *a) {
+    if (strchr(a, ' ') || !*a) printf(" \"%s\"", a);
+    else printf(" %s", a);
+}
+
+static int cmd_spec(int argc, char **argv) {
+    if (argc < 4) return usage();
+    char error[1024] = "";
+    if (strcmp(argv[2], "new") == 0) {
+        if (ojh_gamespec_write_template(argv[3], error, sizeof error) != 0) {
+            fprintf(stderr, "spec: %s\n", error);
+            return 1;
+        }
+        fprintf(stderr, "spec: wrote %s. Fill it in, then run: ojh spec check %s\n", argv[3], argv[3]);
+        return 0;
+    }
+    if (strcmp(argv[2], "check") != 0) return usage();
+    ojh_gamespec s;
+    if (ojh_gamespec_load(argv[3], &s, error, sizeof error) != 0) {
+        fprintf(stderr, "spec: %s\n", error);
+        return 1;
+    }
+    char self[1024] = "ojh";
+    ojh_self_path(self, sizeof self);
+    ojh_spec_values v = {s.default_turns, 20260914u, 8, "<OJH's scratch folder>", self};
+    printf("%s (id %s)%s%s\n", s.name, s.id, *s.version ? ", version " : "", s.version);
+    if (s.turns_from == OJH_TURNS_PROTOCOL) {
+        printf("  turns:      the game prints OJH ready, then OJH turn N as each turn ends\n");
+    } else {
+        printf("  turns:      the gaps between lines containing \"%s\" on %s\n", s.turn_ends,
+               s.stream == OJH_STDOUT ? "stdout" : s.stream == OJH_STDERR ? "stderr" : "stdout or stderr");
+        if (s.game_starts) printf("  start-up:   ends at the first line containing \"%s\"\n", s.game_starts);
+        else printf("  start-up:   ends at the first turn line, which is not timed as a turn\n");
+    }
+    if (s.players_chosen) printf("  players:    chosen by OJH (--players, default 8)\n");
+    else if (s.players) printf("  players:    %d, as the spec says\n", s.players);
+    else printf("  players:    as the game prints them, or n/a\n");
+    printf("  command:   ");
+    int missing = 0;
+    for (int i = 0; i < s.command_count; i++) {
+        char *filled = ojh_gamespec_expand(s.command[i], &s, &v);
+        char *shown = filled && i == 0 ? ojh_gamespec_path(&s, filled, 1) : NULL;
+        const char *text = shown ? shown : filled ? filled : "?";
+        if (i == 0 && (strchr(text, '/') || strchr(text, '\\'))) {
+            FILE *f = fopen(text, "rb");
+            if (f) fclose(f);
+            else missing = 1;
+        }
+        print_argument(text);
+        free(shown);
+        free(filled);
+    }
+    char *cwd_template = s.working_directory ? ojh_gamespec_expand(s.working_directory, &s, &v) : NULL;
+    char *cwd = ojh_gamespec_path(&s, cwd_template ? cwd_template : ".", 0);
+    printf("\n  in folder:  %s\n", cwd ? cwd : "?");
+    free(cwd_template);
+    free(cwd);
+    for (int i = 0; i < s.environment_count; i++) {
+        char *filled = ojh_gamespec_expand(s.environment[i], &s, &v);
+        printf("  environment: %s\n", filled ? filled : "?");
+        free(filled);
+    }
+    printf("  default:    %d turns, stopped after %.0f s\n", s.default_turns, s.timeout_seconds);
+    ojh_gamespec_free(&s);
+    if (missing) {
+        fprintf(stderr, "spec: the program does not exist at that path yet; the spec itself is valid\n");
+        return 1;
+    }
+    fprintf(stderr, "spec: ok\n");
     return 0;
 }
 
@@ -225,6 +393,69 @@ static char *read_all(const char *path) {
     fclose(f);
     if (buf) buf[len] = '\0';
     return buf;
+}
+
+/* "1,338" as the report writes a score. */
+static void points_text(char *out, size_t n, double total) {
+    long v = (long)(total + 0.5);
+    if (v >= 1000) snprintf(out, n, "%ld,%03ld", v / 1000, v % 1000);
+    else snprintf(out, n, "%ld", v);
+}
+
+/* Freeciv's scorecard shows the score of its own file, and stays byte-for-byte the same
+   when Open Doctrines leaves the folder. */
+static int check_scorecards(const char *dir, const char *freeciv_path, const char *od_path) {
+    const char *suffixes[] = {"md", "txt", "svg"};
+    char freeciv_card[3][1200], od_card[3][1200];
+    for (int i = 0; i < 3; i++) {
+        snprintf(freeciv_card[i], sizeof freeciv_card[i], "%s/score-freeciv.%s", dir, suffixes[i]);
+        snprintf(od_card[i], sizeof od_card[i], "%s/score-opendoctrines.%s", dir, suffixes[i]);
+    }
+    int failures = 0;
+    char error[256], expected[48] = "?", bold[64];
+    char *card = read_all(freeciv_card[0]), *card_txt = read_all(freeciv_card[1]), *badge = read_all(freeciv_card[2]);
+    char *od = read_all(od_card[0]);
+    ojh_jvalue *alone = ojh_jparse_file(freeciv_path, error, sizeof error);
+    ojh_score s;
+    if (alone && ojh_score_result(alone, &s) == 0) points_text(expected, sizeof expected, s.total);
+    if (alone) ojh_jfree(alone);
+    snprintf(bold, sizeof bold, "**%s points**", expected);
+    if (!card || !strstr(card, bold) || !strstr(card, "| Turn throughput | 40% |") || !strstr(card, "## Why it is provisional")) {
+        fprintf(stderr, "report: score-freeciv.md is missing, or does not show %s from Freeciv's own file\n", bold);
+        failures++;
+    }
+    if (!card_txt || strstr(card_txt, "**") || !strstr(card_txt, expected)) {
+        fputs("report: score-freeciv.txt is missing, has Markdown, or lacks the score\n", stderr);
+        failures++;
+    }
+    if (!badge || !strstr(badge, "<svg") || !strstr(badge, expected)) {
+        fputs("report: score-freeciv.svg is missing or lacks the score\n", stderr);
+        failures++;
+    }
+    if (!od || !strstr(od, "not reported") || !strstr(od, "50% of the weight")) {
+        fputs("report: Open Doctrines' scorecard does not say which parts it lacks\n", stderr);
+        failures++;
+    }
+
+    remove(od_path);
+    for (int i = 0; i < 3; i++) {
+        remove(od_card[i]);
+        remove(freeciv_card[i]);
+    }
+    char again_error[1024] = "";
+    ojh_report_write(dir, again_error, sizeof again_error);
+    char *again = read_all(freeciv_card[0]);
+    if (!card || !again || strcmp(card, again) != 0) {
+        fputs("report: Freeciv's scorecard changed when Open Doctrines left the folder\n", stderr);
+        failures++;
+    }
+    for (int i = 0; i < 3; i++) remove(freeciv_card[i]);
+    free(card);
+    free(card_txt);
+    free(badge);
+    free(od);
+    free(again);
+    return failures;
 }
 
 /* A complete result and one with gaps, through the report, in both formats. */
@@ -287,6 +518,7 @@ static int test_report(void) {
     char error[1024] = "";
     int status = ojh_report_write(dir, error, sizeof error);
     char *md = read_all(md_path), *txt = read_all(txt_path);
+    int card_failures = check_scorecards(dir, freeciv_path, od_path);
     remove(freeciv_path);
     remove(od_path);
     remove(md_path);
@@ -301,7 +533,8 @@ static int test_report(void) {
                               "| Open Doctrines | 500 | 967.7 |", "| 2,592 tiles |", "0.060 → 0.420",
                               "The runs timed different numbers of turns (99 to 500)", "Player counts differ (8 to 37)",
                               "n/a for TPM × regions", "**Freeciv**: gaps between", "8 players, chosen by OJH",
-                              "players as the game's own scenario or world sets them"};
+                              "players as the game's own scenario or world sets them",
+                              "## OJH scores", "| score-freeciv.md |", "| provisional |"};
     const char *txt_needs[] = {"Objective Judge Horizon (OJH) report\n====", "Freeciv", "237.7", "967.7", "2,592 tiles",
                                "  - Freeciv: gaps between"};
     int failures = 0;
@@ -329,8 +562,8 @@ static int test_report(void) {
     }
     free(md);
     free(txt);
-    if (failures) return 1;
-    puts("report: ok (machine, TPM table with n/a gaps, how each game was timed and the comparison warnings, in Markdown and text)");
+    if (failures || card_failures) return 1;
+    puts("report: ok (machine, scores, TPM table with n/a gaps, how each game was timed and the comparison warnings, in Markdown and text; scorecards match each game's own file and do not change when another game leaves)");
     return 0;
 }
 
@@ -493,6 +726,224 @@ static int test_tpm(void) {
 
     if (failures) return 1;
     puts("tpm: ok (GD5, Unciv, Freeciv and Open Doctrines output formats parse to the expected turns, times, players and regions)");
+    return 0;
+}
+
+/* A stand-in game for the spec tests and examples/games: it loads, then plays turns that
+   take a little longer with more players, printing OJH's protocol lines or, with "plain",
+   ordinary log lines. */
+static int sample_game(int argc, char **argv) {
+    int turns = argc > 3 ? atoi(argv[3]) : 10;
+    int players = argc > 4 ? atoi(argv[4]) : 4;
+    int plain = argc > 5 && strcmp(argv[5], "plain") == 0;
+    if (turns < 1) turns = 1;
+    if (players < 1) players = 1;
+    ojh_sleep(0.05);
+    if (plain) printf("Loading world\nWorld ready with %d nations and 480 provinces\n", players);
+    else printf("OJH players %d\nOJH regions 480 provinces\nOJH ready\n", players);
+    fflush(stdout);
+    for (int t = 1; t <= turns; t++) {
+        ojh_sleep(0.004 + 0.001 * players);
+        if (plain) printf("Turn %d finished\n", t);
+        else printf("OJH turn %d\n", t);
+        fflush(stdout);
+    }
+    return 0;
+}
+
+static const char SAMPLE_PROTOCOL_SPEC[] =
+    "{\"ojh_game_spec\": 1, \"id\": \"sample-protocol\", \"name\": \"Sample\", \"version\": \"1\", "
+    "\"command\": [\"{ojh}\", \"selftest\", \"sample-game\", \"{turns}\", \"{players}\"], "
+    "\"turns\": {\"from\": \"protocol\"}, \"region_kind\": \"provinces\"}";
+static const char SAMPLE_MARKER_SPEC[] =
+    "{\"ojh_game_spec\": 1, \"id\": \"sample-marker\", \"name\": \"Sample (marker)\", "
+    "\"command\": [\"{ojh}\", \"selftest\", \"sample-game\", \"{turns}\", \"{players}\", \"plain\"], "
+    "\"environment\": {\"LC_ALL\": \"C\"}, "
+    "\"turns\": {\"from\": \"marker\", \"game_starts\": \"World ready\", \"turn_ends\": \"finished\", \"stream\": \"stdout\", "
+    "\"players_after\": \"ready with \", \"regions_after\": \"nations and \"}, \"region_kind\": \"provinces\"}";
+
+/* Specs: what must be refused and why, the protocol and marker readings, placeholders,
+   and whole runs of the sample game through both kinds of spec. */
+static int test_spec(void) {
+    int failures = 0;
+    char error[1024];
+    ojh_gamespec s;
+    static const struct {
+        const char *text;
+        const char *says;
+    } bad[] = {
+        {"{\"ojh_game_spec\": 1, \"id\": \"g\", \"name\": \"G\", \"turns\": {\"from\": \"protocol\"}}", "\"command\" must be a list"},
+        {"{\"ojh_game_spec\": 1, \"id\": \"My Game\", \"name\": \"G\", \"command\": [\"g\"], \"turns\": {\"from\": \"protocol\"}}", "lower-case"},
+        {"{\"ojh_game_spec\": 1, \"id\": \"freeciv\", \"name\": \"G\", \"command\": [\"g\"], \"turns\": {\"from\": \"protocol\"}}", "belongs to a game OJH measures"},
+        {"{\"ojh_game_spec\": 1, \"id\": \"g\", \"name\": \"G\", \"comand\": [\"g\"], \"turns\": {\"from\": \"protocol\"}}", "unknown key \"comand\""},
+        {"{\"ojh_game_spec\": 1, \"id\": \"g\", \"name\": \"G\", \"command\": [\"g\", \"{turn}\"], \"turns\": {\"from\": \"protocol\"}}", "{turn}"},
+        {"{\"ojh_game_spec\": 1, \"id\": \"g\", \"name\": \"G\", \"command\": [\"g\"], \"turns\": {\"from\": \"marker\"}}", "no \"turn_ends\""},
+        {"{\"ojh_game_spec\": 2, \"id\": \"g\", \"name\": \"G\", \"command\": [\"g\"], \"turns\": {\"from\": \"protocol\"}}", "must be 1"},
+        {"{\"ojh_game_spec\": 1, \"id\": \"g\", \"name\": \"G\", \"command\": [\"g\"]}", "\"turns\" is missing"},
+        {"{\"ojh_game_spec\": 1, \"id\": \"g\", \"name\": \"G\", \"command\": [\"g\"], \"turns\": {\"from\": \"protocol\"}, \"players\": 0}", "\"players\""},
+        {"{\"ojh_game_spec\": 1, \"id\": \"g\", \"name\": \"G\", \"command\": [\"g\"], \"turns\": {\"from\": \"marker\", \"turn_ends\": \"x\", \"stream\": \"out\"}}", "\"stream\""},
+        {"[1, 2]", "JSON object"},
+        {"{\"id\": ", "not valid JSON"},
+    };
+    for (size_t i = 0; i < sizeof bad / sizeof bad[0]; i++) {
+        *error = '\0';
+        if (ojh_gamespec_parse(bad[i].text, strlen(bad[i].text), ".", &s, error, sizeof error) == 0) {
+            fprintf(stderr, "spec: accepted %s\n", bad[i].text);
+            ojh_gamespec_free(&s);
+            failures++;
+        } else if (!strstr(error, bad[i].says)) {
+            fprintf(stderr, "spec: refused %s but said \"%s\" (expected it to mention %s)\n", bad[i].text, error, bad[i].says);
+            failures++;
+        }
+    }
+
+    if (ojh_gamespec_parse(SAMPLE_PROTOCOL_SPEC, strlen(SAMPLE_PROTOCOL_SPEC), "/games/sample", &s, error, sizeof error) != 0) {
+        fprintf(stderr, "spec: the protocol sample was refused: %s\n", error);
+        return 1;
+    }
+    if (!s.players_chosen || s.default_turns != 100 || s.turns_from != OJH_TURNS_PROTOCOL) {
+        fputs("spec: the protocol sample read back wrong\n", stderr);
+        failures++;
+    }
+    ojh_spec_values values = {7, 42, 3, "/w", "/bin/ojh"};
+    char *filled = ojh_gamespec_expand("{ojh} --turns={turns} {seed}/{players} {work} {spec_dir} {brace", &s, &values);
+    if (!filled || strcmp(filled, "/bin/ojh --turns=7 42/3 /w /games/sample {brace") != 0) {
+        fprintf(stderr, "spec: placeholders filled in as \"%s\"\n", filled ? filled : "(null)");
+        failures++;
+    }
+    free(filled);
+    char *near_spec = ojh_gamespec_path(&s, "./MyGame", 1), *on_path = ojh_gamespec_path(&s, "python3", 1);
+    if (!near_spec || !on_path || strcmp(near_spec, "/games/sample/MyGame") != 0 || strcmp(on_path, "python3") != 0) {
+        fprintf(stderr, "spec: paths resolved to %s and %s\n", near_spec ? near_spec : "?", on_path ? on_path : "?");
+        failures++;
+    }
+    free(near_spec);
+    free(on_path);
+
+    ojh_line lines[] = {
+        {0.1, OJH_STDOUT, "loading"},
+        {0.9, OJH_STDERR, "[main] OJH players 6"},
+        {1.0, OJH_STDOUT, "OJH ready"},
+        {1.5, OJH_STDOUT, "OJH turn 1"},
+        {2.5, OJH_STDOUT, "12:00:02 INFO: OJH turn 2"},
+        {2.6, OJH_STDOUT, "OJH turn 3 0.25"},
+        {2.7, OJH_STDOUT, "NOJH turn 4"},
+        {2.8, OJH_STDOUT, "OJH regions 480 provinces"},
+    };
+    ojh_tpm t;
+    if (ojh_tpm_parse_spec(&s, lines, sizeof lines / sizeof lines[0], &t) != 0 || t.turns != 3 ||
+        !close_to(t.play_seconds, 1.75) || !close_to(t.boot_seconds, 1.0) || t.players != 6 || t.regions != 480 ||
+        strcmp(t.region_kind, "provinces") != 0 || strcmp(t.id, "sample-protocol") != 0 || t.game != OJH_GAME_CUSTOM) {
+        fprintf(stderr, "spec: protocol lines gave turns %d play %.3f boot %.3f players %d regions %ld %s id %s\n",
+                t.turns, t.play_seconds, t.boot_seconds, t.players, t.regions, t.region_kind, t.id);
+        failures++;
+    }
+    ojh_tpm_free(&t);
+
+    /* Whole runs. */
+    char self[1024], work[1200];
+    if (ojh_self_path(self, sizeof self) != 0) return 1;
+    const char *tmp = getenv("TMPDIR");
+    if (!tmp) tmp = getenv("TEMP");
+    if (!tmp) tmp = ".";
+    snprintf(work, sizeof work, "%s/ojh-spec-selftest", tmp);
+    ojh_tpm_options o;
+    memset(&o, 0, sizeof o);
+    o.turns = 12;
+    o.players = 5;
+    o.seed = 1;
+    o.timeout_seconds = 60;
+    o.work_dir = work;
+    o.ojh_path = self;
+    snprintf(s.spec_dir, sizeof s.spec_dir, "%s", tmp); /* the path checks above used a folder that does not exist */
+    if (ojh_tpm_run_spec(&s, &o, &t, error, sizeof error) != 0 || t.turns != 12 || t.players != 5 || t.regions != 480 ||
+        t.boot_seconds < 0 || t.exit_code != 0) {
+        fprintf(stderr, "spec: the protocol sample ran to turns %d players %d regions %ld exit %d (%s)\n", t.turns,
+                t.players, t.regions, t.exit_code, error);
+        failures++;
+    }
+    ojh_tpm_free(&t);
+    ojh_gamespec_free(&s);
+
+    if (ojh_gamespec_parse(SAMPLE_MARKER_SPEC, strlen(SAMPLE_MARKER_SPEC), tmp, &s, error, sizeof error) != 0) {
+        fprintf(stderr, "spec: the marker sample was refused: %s\n", error);
+        return 1;
+    }
+    if (ojh_tpm_run_spec(&s, &o, &t, error, sizeof error) != 0 || t.turns != 12 || t.players != 5 || t.regions != 480 ||
+        t.boot_seconds < 0 || !strstr(t.how, "\"finished\"")) {
+        fprintf(stderr, "spec: the marker sample ran to turns %d players %d regions %ld boot %.3f (%s)\n", t.turns,
+                t.players, t.regions, t.boot_seconds, error);
+        failures++;
+    }
+    ojh_tpm_free(&t);
+    ojh_gamespec_free(&s);
+
+    if (failures) return 1;
+    puts("spec: ok (bad specs refused with the reason; protocol lines, markers, placeholders and paths read right; "
+         "the sample game timed through both kinds of spec)");
+    return 0;
+}
+
+static void score_doc(char *out, size_t n, double tpm, const char *regions, int turns, const char *reference,
+                      const char *error) {
+    snprintf(out, n,
+             "{\"metric\": \"tpm\", \"machine\": {\"reference\": %s}, \"result\": {\"game\": \"g\", \"name\": \"G\", "
+             "\"turns\": %d, \"tpm\": %.2f, \"players\": 40, \"regions\": %s, \"boot_seconds\": 5, \"per_turn\": "
+             "{\"median_seconds\": 0.2, \"p95_seconds\": 0.4, \"early_median_seconds\": 0.1, \"late_median_seconds\": 0.2}}, "
+             "\"error\": %s}", reference, turns, tpm, regions, error);
+}
+
+static int score_of(const char *doc, ojh_score *s) {
+    char error[256];
+    ojh_jvalue *root = ojh_jparse(doc, strlen(doc), error, sizeof error);
+    int status = root ? ojh_score_result(root, s) : -1;
+    if (root) ojh_jfree(root);
+    return status;
+}
+
+/* The score against hand-worked answers. */
+static int test_score(void) {
+    int failures = 0;
+    char doc[1024];
+    ojh_score s;
+    if (!close_to(ojh_score_points(1, 1), 1000) || !close_to(ojh_score_points(7, 1), 3000) || ojh_score_points(0, 1) != 0) {
+        fputs("score: points are not 1000 x log2(1 + value / reference)\n", stderr);
+        failures++;
+    }
+
+    /* Every part exactly at its reference level, measured on a CPU twice the reference's speed. */
+    score_doc(doc, sizeof doc, 100, "4000", 100, "{\"single_core_rounds_per_second\": 2000}", "null");
+    if (score_of(doc, &s) != 0 || !close_to(s.total, 1000) || !close_to(s.coverage, 1) || s.provisional || s.reason_count) {
+        fprintf(stderr, "score: parts at their reference levels gave %.3f, coverage %.2f, provisional %d:", s.total,
+                s.coverage, s.provisional);
+        for (int i = 0; i < s.part_count; i++) fprintf(stderr, " %s %.3f", s.parts[i].key, s.parts[i].points);
+        fputc('\n', stderr);
+        failures++;
+    }
+
+    /* Three times the turn throughput and no map size: 2000 points for throughput, world
+       throughput left out rather than counted as zero. */
+    score_doc(doc, sizeof doc, 300, "null", 100, "{\"single_core_rounds_per_second\": 2000}", "null");
+    if (score_of(doc, &s) != 0 || !close_to(s.total, 1150.0 / 0.75) || !close_to(s.coverage, 0.75) || s.provisional ||
+        s.reason_count != 1 || !strstr(s.reasons[0], "World throughput")) {
+        fprintf(stderr, "score: a partial result gave %.3f, coverage %.2f, provisional %d, notes %d\n", s.total,
+                s.coverage, s.provisional, s.reason_count);
+        failures++;
+    }
+
+    /* Short, crashed and with no CPU reference: provisional, with all three reasons. */
+    score_doc(doc, sizeof doc, 100, "4000", 20, "null", "\"crashed\"");
+    if (score_of(doc, &s) != 0 || !s.provisional || s.reason_count != 3 || s.hardware_known) {
+        fprintf(stderr, "score: a short failed run gave provisional %d with %d reasons\n", s.provisional, s.reason_count);
+        failures++;
+    }
+
+    if (score_of("{\"metric\": \"fps\"}", &s) == 0) {
+        fputs("score: scored something that is not a TPM result\n", stderr);
+        failures++;
+    }
+    if (failures) return 1;
+    puts("score: ok (points, hardware adjustment, weights, partial coverage and provisional runs match hand-worked answers)");
     return 0;
 }
 
@@ -797,6 +1248,8 @@ int main(int argc, char **argv) {
     if (strcmp(argv[1], "relay") == 0) return cmd_relay(argc, argv);
     if (strcmp(argv[1], "tpm") == 0) return cmd_tpm(argc, argv);
     if (strcmp(argv[1], "report") == 0) return cmd_report(argc, argv);
+    if (strcmp(argv[1], "score") == 0) return cmd_score(argc, argv);
+    if (strcmp(argv[1], "spec") == 0) return cmd_spec(argc, argv);
     if (strcmp(argv[1], "selftest") == 0 && argc > 2) {
         if (strcmp(argv[2], "sha256") == 0) return test_sha256();
         if (strcmp(argv[2], "json") == 0) return test_json();
@@ -807,6 +1260,9 @@ int main(int argc, char **argv) {
         if (strcmp(argv[2], "tpm") == 0) return test_tpm();
         if (strcmp(argv[2], "jsonread") == 0) return test_jsonread();
         if (strcmp(argv[2], "report") == 0) return test_report();
+        if (strcmp(argv[2], "spec") == 0) return test_spec();
+        if (strcmp(argv[2], "score") == 0) return test_score();
+        if (strcmp(argv[2], "sample-game") == 0) return sample_game(argc, argv);
         if (strcmp(argv[2], "print-lines") == 0) return print_lines();
         if (strcmp(argv[2], "sleep-long") == 0) {
             ojh_sleep(60);

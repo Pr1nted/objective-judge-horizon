@@ -1,0 +1,15 @@
+{
+  "ojh_game_spec": 1,
+  "id": "sample-protocol",
+  "name": "OJH sample game (protocol)",
+  "version": "1",
+  "license": "same as OJH",
+  "notes": [
+    "A stand-in game built into OJH that prints the OJH protocol lines.",
+    "Try it: build/ojh tpm examples/games/sample-protocol.json --turns 50 --out results/sample/sample-protocol.json"
+  ],
+  "command": ["{ojh}", "selftest", "sample-game", "{turns}", "{players}"],
+  "turns": {"from": "protocol"},
+  "default_turns": 50,
+  "timeout_seconds": 120
+}

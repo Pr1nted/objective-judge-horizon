@@ -427,7 +427,7 @@ int ojh_process_tree(ojh_pid root, ojh_pid *out, int max) {
     struct dirent *e;
     while (pairs && (e = readdir(proc))) {
         if (e->d_name[0] < '1' || e->d_name[0] > '9') continue;
-        char path[64], buf[512];
+        char path[300], buf[512];
         snprintf(path, sizeof path, "/proc/%s/stat", e->d_name);
         FILE *f = fopen(path, "r");
         if (!f) continue;

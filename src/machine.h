@@ -7,7 +7,7 @@
 
 /* The machine a result was measured on. Every report carries one. */
 typedef struct {
-    char os[128];
+    char os[512];
     char model[128];
     char cpu[128];
     char gpu[128];

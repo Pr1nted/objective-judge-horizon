@@ -76,6 +76,8 @@ int ojh_command_line(const char *const *argv, char *out, size_t cap); /* 0 on su
 #endif
 /* Creates a directory; an existing one is fine. 0 on success. */
 int ojh_make_dir(const char *path);
+/* Calls fn once for each entry of dir, skipping . and ..; 0 on success. */
+int ojh_list_dir(const char *dir, void (*fn)(const char *name, void *user), void *user);
 /* The process and all its descendants, root first. Returns how many were written. */
 int ojh_process_tree(ojh_pid root, ojh_pid *out, int max);
 /* Private memory in bytes and CPU time (user + system) in nanoseconds. 0 if the

@@ -13,6 +13,7 @@
 #include "machine.h"
 #include "netmeter.h"
 #include "procmeter.h"
+#include "report.h"
 #include "runner.h"
 #include "sha256.h"
 #include "tpm.h"
@@ -31,7 +32,8 @@ static int usage(void) {
           "          [--freeciv-server PATH] [--unciv-jar PATH --java PATH --javac PATH --jar PATH]\n"
           "          [--drivers DIR] [--work DIR] [--out FILE]\n"
           "                                         turns per minute, every player AI\n"
-          "  ojh selftest sha256|json|jsonread|relay|procmeter|runner|tpm\n",
+          "  ojh report <folder>                    report.md and report.txt from the result files in a folder\n"
+          "  ojh selftest sha256|json|jsonread|relay|procmeter|runner|tpm|report\n",
           stderr);
     return 2;
 }
@@ -172,9 +174,154 @@ static int cmd_tpm(int argc, char **argv) {
     return status == 0 ? 0 : 1;
 }
 
+static int cmd_report(int argc, char **argv) {
+    if (argc < 3) return usage();
+    char error[1024] = "";
+    if (ojh_report_write(argv[2], error, sizeof error) != 0) {
+        fprintf(stderr, "report: %s\n", error);
+        return 1;
+    }
+    fprintf(stderr, "report: wrote %s/report.md and %s/report.txt\n", argv[2], argv[2]);
+    return 0;
+}
+
 /* ---- self-tests: each proves one piece against a known answer */
 
 static int close_to(double a, double b) { return a - b < 1e-6 && b - a < 1e-6; }
+
+/* One result file the way `ojh tpm` writes it. */
+static int write_tpm_result(const char *path, const ojh_machine *m, const ojh_reference *ref, const ojh_tpm *t,
+                            int turns_requested) {
+    FILE *f = fopen(path, "wb");
+    if (!f) return -1;
+    ojh_json w;
+    ojh_json_init(&w, f);
+    ojh_json_object(&w);
+    ojh_json_key(&w, "ojh_version"); ojh_json_string(&w, OJH_VERSION);
+    ojh_json_key(&w, "metric"); ojh_json_string(&w, "tpm");
+    ojh_json_key(&w, "machine"); ojh_machine_json(&w, m, ref);
+    ojh_json_key(&w, "settings");
+    ojh_json_object(&w);
+    ojh_json_key(&w, "turns_requested"); ojh_json_int(&w, turns_requested);
+    ojh_json_key(&w, "seed"); ojh_json_uint(&w, 20260914u);
+    ojh_json_key(&w, "players_requested"); ojh_json_int(&w, 8);
+    ojh_json_end_object(&w);
+    ojh_json_key(&w, "result"); ojh_tpm_json(&w, t);
+    ojh_json_key(&w, "error"); ojh_json_null(&w);
+    ojh_json_end_object(&w);
+    fclose(f);
+    return 0;
+}
+
+static char *read_all(const char *path) {
+    FILE *f = fopen(path, "rb");
+    if (!f) return NULL;
+    char *buf = malloc(1 << 20);
+    size_t len = buf ? fread(buf, 1, (1 << 20) - 1, f) : 0;
+    fclose(f);
+    if (buf) buf[len] = '\0';
+    return buf;
+}
+
+/* A complete result and one with gaps, through the report, in both formats. */
+static int test_report(void) {
+    const char *tmp = getenv("TMPDIR");
+    if (!tmp) tmp = getenv("TEMP");
+    if (!tmp) tmp = ".";
+    char dir[1024], freeciv_path[1200], od_path[1200], md_path[1200], txt_path[1200];
+    snprintf(dir, sizeof dir, "%s/ojh-report-selftest", tmp);
+    ojh_make_dir(dir);
+    snprintf(freeciv_path, sizeof freeciv_path, "%s/freeciv.json", dir);
+    snprintf(od_path, sizeof od_path, "%s/opendoctrines.json", dir);
+    snprintf(md_path, sizeof md_path, "%s/report.md", dir);
+    snprintf(txt_path, sizeof txt_path, "%s/report.txt", dir);
+
+    ojh_machine m;
+    memset(&m, 0, sizeof m);
+    snprintf(m.os, sizeof m.os, "macOS 26.3 (25D125)");
+    snprintf(m.model, sizeof m.model, "MacBookPro18,1");
+    snprintf(m.cpu, sizeof m.cpu, "Apple M1 Pro");
+    snprintf(m.gpu, sizeof m.gpu, "Apple M1 Pro");
+    snprintf(m.gpu_cores, sizeof m.gpu_cores, "16");
+    snprintf(m.display, sizeof m.display, "3456 x 2234 Retina");
+    m.logical_cpus = 10;
+    m.performance_cpus = 8;
+    m.efficiency_cpus = 2;
+    m.memory_bytes = 17179869184ull;
+    m.on_battery = 0;
+    ojh_reference ref = {3.0, 10, 1252.0, 8399.0};
+
+    static double freeciv_turns[] = {0.06, 0.06, 0.2, 0.2, 0.42, 0.42};
+    ojh_tpm freeciv;
+    memset(&freeciv, 0, sizeof freeciv);
+    freeciv.game = OJH_GAME_FREECIV;
+    freeciv.turns = 99;
+    freeciv.timed_turns = 6;
+    freeciv.turn_seconds = freeciv_turns;
+    freeciv.play_seconds = 24.985;
+    freeciv.boot_seconds = 0.485;
+    freeciv.wall_seconds = 25.962;
+    freeciv.players = 8;
+    freeciv.regions = 2592;
+    snprintf(freeciv.region_kind, sizeof freeciv.region_kind, "tiles");
+    snprintf(freeciv.how, sizeof freeciv.how, "gaps between Freeciv's per-turn log lines");
+
+    ojh_tpm od;
+    memset(&od, 0, sizeof od);
+    od.game = OJH_GAME_OPENDOCTRINES;
+    od.turns = 500;
+    od.play_seconds = 31.0;
+    od.boot_seconds = 12.662;
+    od.wall_seconds = 43.899;
+    od.players = 37;
+    snprintf(od.how, sizeof od.how, "Open Doctrines' own [EVAL] progress line");
+
+    if (write_tpm_result(freeciv_path, &m, &ref, &freeciv, 100) != 0 || write_tpm_result(od_path, &m, &ref, &od, 500) != 0) {
+        fputs("report: cannot write the result files\n", stderr);
+        return 1;
+    }
+    char error[1024] = "";
+    int status = ojh_report_write(dir, error, sizeof error);
+    char *md = read_all(md_path), *txt = read_all(txt_path);
+    remove(freeciv_path);
+    remove(od_path);
+    remove(md_path);
+    remove(txt_path);
+    if (status != 0 || !md || !txt) {
+        fprintf(stderr, "report: not written (%s)\n", error);
+        free(md);
+        free(txt);
+        return 1;
+    }
+    const char *md_needs[] = {"# Objective Judge Horizon (OJH) report", "| Apple M1 Pro |", "| Freeciv | 99 | 237.7 |",
+                              "| Open Doctrines | 500 | 967.7 |", "| 2,592 tiles |", "0.060 → 0.420",
+                              "The runs timed different numbers of turns (99 to 500)", "Player counts differ (8 to 37)",
+                              "n/a for TPM × regions", "**Freeciv**: gaps between"};
+    const char *txt_needs[] = {"Objective Judge Horizon (OJH) report\n====", "Freeciv", "237.7", "967.7", "2,592 tiles",
+                               "  - Freeciv: gaps between"};
+    int failures = 0;
+    for (size_t i = 0; i < sizeof md_needs / sizeof md_needs[0]; i++) {
+        if (!strstr(md, md_needs[i])) {
+            fprintf(stderr, "report: report.md is missing \"%s\"\n", md_needs[i]);
+            failures++;
+        }
+    }
+    for (size_t i = 0; i < sizeof txt_needs / sizeof txt_needs[0]; i++) {
+        if (!strstr(txt, txt_needs[i])) {
+            fprintf(stderr, "report: report.txt is missing \"%s\"\n", txt_needs[i]);
+            failures++;
+        }
+    }
+    if (strstr(txt, "| Freeciv |") || strstr(txt, "**")) {
+        fputs("report: report.txt has Markdown in it\n", stderr);
+        failures++;
+    }
+    free(md);
+    free(txt);
+    if (failures) return 1;
+    puts("report: ok (machine, TPM table with n/a gaps, how each game was timed and the comparison warnings, in Markdown and text)");
+    return 0;
+}
 
 /* Reading JSON back: values, escapes and UTF-8, what must be refused, and OJH's own output. */
 static int test_jsonread(void) {
@@ -638,6 +785,7 @@ int main(int argc, char **argv) {
     if (strcmp(argv[1], "machine") == 0) return cmd_machine(argc, argv);
     if (strcmp(argv[1], "relay") == 0) return cmd_relay(argc, argv);
     if (strcmp(argv[1], "tpm") == 0) return cmd_tpm(argc, argv);
+    if (strcmp(argv[1], "report") == 0) return cmd_report(argc, argv);
     if (strcmp(argv[1], "selftest") == 0 && argc > 2) {
         if (strcmp(argv[2], "sha256") == 0) return test_sha256();
         if (strcmp(argv[2], "json") == 0) return test_json();
@@ -647,6 +795,7 @@ int main(int argc, char **argv) {
         if (strcmp(argv[2], "runner") == 0) return test_runner();
         if (strcmp(argv[2], "tpm") == 0) return test_tpm();
         if (strcmp(argv[2], "jsonread") == 0) return test_jsonread();
+        if (strcmp(argv[2], "report") == 0) return test_report();
         if (strcmp(argv[2], "print-lines") == 0) return print_lines();
         if (strcmp(argv[2], "sleep-long") == 0) {
             ojh_sleep(60);

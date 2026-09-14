@@ -25,6 +25,7 @@
 #  include <spawn.h>
 #  include <sys/socket.h>
 #  include <sys/stat.h>
+#  include <dirent.h>
 #  include <sys/wait.h>
 #  include <time.h>
 #  include <unistd.h>
@@ -392,6 +393,30 @@ int ojh_make_dir(const char *path) {
     return (_mkdir(path) == 0 || errno == EEXIST) ? 0 : -1;
 #else
     return (mkdir(path, 0755) == 0 || errno == EEXIST) ? 0 : -1;
+#endif
+}
+
+int ojh_list_dir(const char *dir, void (*fn)(const char *name, void *user), void *user) {
+#ifdef _WIN32
+    char pattern[4100];
+    snprintf(pattern, sizeof pattern, "%s\\*", dir);
+    WIN32_FIND_DATAA data;
+    HANDLE h = FindFirstFileA(pattern, &data);
+    if (h == INVALID_HANDLE_VALUE) return -1;
+    do {
+        if (strcmp(data.cFileName, ".") != 0 && strcmp(data.cFileName, "..") != 0) fn(data.cFileName, user);
+    } while (FindNextFileA(h, &data));
+    FindClose(h);
+    return 0;
+#else
+    DIR *d = opendir(dir);
+    if (!d) return -1;
+    struct dirent *e;
+    while ((e = readdir(d))) {
+        if (strcmp(e->d_name, ".") != 0 && strcmp(e->d_name, "..") != 0) fn(e->d_name, user);
+    }
+    closedir(d);
+    return 0;
 #endif
 }
 

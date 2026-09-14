@@ -18,6 +18,7 @@ add_executable(ojh
     src/runner.c
     src/tpm.c
     src/jsonread.c
+    src/report.c
 )
 target_include_directories(ojh PRIVATE src)
 
@@ -41,6 +42,6 @@ else()
 endif()
 
 enable_testing()
-foreach(test sha256 json jsonread relay procmeter runner tpm)
+foreach(test sha256 json jsonread relay procmeter runner tpm report)
     add_test(NAME ${test} COMMAND ojh selftest ${test})
 endforeach()

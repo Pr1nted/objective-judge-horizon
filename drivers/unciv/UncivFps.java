@@ -233,7 +233,6 @@ public final class UncivFps {
             switch (stage) {
                 case 0:
                     if (getScreen() instanceof MainMenuScreen) {
-                        Gdx.graphics.setWindowedMode(1600, 900);
                         say("OJH renderer " + Gdx.graphics.getGLVersion().getRendererString() + ", OpenGL "
                                 + Gdx.graphics.getGLVersion().getMajorVersion() + "." + Gdx.graphics.getGLVersion().getMinorVersion()
                                 + " via LWJGL3");

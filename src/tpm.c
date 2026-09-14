@@ -105,11 +105,34 @@ static int parse_freeciv(const ojh_line *lines, size_t count, ojh_tpm *t) {
     return t->turns > 0 ? 0 : -1;
 }
 
+static const char *protocol_word(const char *s);
+
 static int parse_opendoctrines(const ojh_line *lines, size_t count, ojh_tpm *t) {
-    int last_turns = 0;
+    int last_turns = 0, protocol_turns = 0;
     double last_average = 0;
     for (size_t i = 0; i < count; i++) {
         const char *s = lines[i].text;
+        const char *w = protocol_word(s);
+        if (w) {
+            int n = 0;
+            double seconds = 0;
+            if (strncmp(w, "turn ", 5) == 0 && sscanf(w + 5, "%d %lf", &n, &seconds) == 2 && seconds >= 0) {
+                push_turn(t, seconds);
+                protocol_turns++;
+            } else if (strncmp(w, "ready", 5) == 0 && (w[5] == '\0' || w[5] == ' ')) {
+                t->boot_seconds = lines[i].t;
+            } else if (strncmp(w, "regions ", 8) == 0) {
+                long regions = strtol(w + 8, NULL, 10);
+                if (regions > 0) {
+                    t->regions = regions;
+                    snprintf(t->region_kind, sizeof t->region_kind, "provinces");
+                }
+            } else if (strncmp(w, "players ", 8) == 0) {
+                int players = atoi(w + 8);
+                if (players > 0) t->players = players;
+            }
+            continue;
+        }
         if (strncmp(s, "[EVAL]", 6) != 0) continue;
         const char *turn = strstr(s, " turn ");
         const char *open = strrchr(s, '(');
@@ -124,19 +147,26 @@ static int parse_opendoctrines(const ojh_line *lines, size_t count, ojh_tpm *t) 
         }
         double v;
         if (strstr(s, "[EVAL] map ") && number_after(s, "countries=", &v)) {
-            t->players = (int)v;
-            t->boot_seconds = lines[i].t;
-            if (number_after(s, "provinces=", &v) && v > 0) {
+            if (!t->players) t->players = (int)v;
+            if (t->boot_seconds < 0) t->boot_seconds = lines[i].t;
+            if (!t->regions && number_after(s, "provinces=", &v) && v > 0) {
                 t->regions = (long)v;
                 snprintf(t->region_kind, sizeof t->region_kind, "provinces");
             }
         }
     }
-    t->turns = last_turns;
-    t->play_seconds = last_average * last_turns;
-    snprintf(t->how, sizeof t->how,
-             "Open Doctrines' own [EVAL] progress line: its average seconds per turn over the first %d turns "
-             "(printed every 250 turns)", last_turns);
+    if (protocol_turns > 0) {
+        t->turns = t->timed_turns;
+        snprintf(t->how, sizeof t->how,
+                 "Open Doctrines' own OJH turn lines (OD_OJH=1): processTurn timed turn by turn inside the headless eval, "
+                 "%d turns", protocol_turns);
+    } else {
+        t->turns = last_turns;
+        t->play_seconds = last_average * last_turns;
+        snprintf(t->how, sizeof t->how,
+                 "Open Doctrines' own [EVAL] progress line: its average seconds per turn over the first %d turns "
+                 "(printed every 250 turns)", last_turns);
+    }
     return t->turns > 0 ? 0 : -1;
 }
 
@@ -325,7 +355,8 @@ int ojh_tpm_run(ojh_game game, const ojh_tpm_options *o, ojh_tpm *out, char *err
         case OJH_GAME_OPENDOCTRINES: {
             if (!o->od_server || !o->od_data) return fail(error, error_len, "needs --od-server and --od-data");
             const char *argv[] = {o->od_server, "--eval-ai", "1", turns, seed, "2", "--data", o->od_data, NULL};
-            return run_and_parse(game, NULL, argv, NULL, NULL, timeout, out, error, error_len);
+            const char *env[] = {"OD_OJH=1", NULL};
+            return run_and_parse(game, NULL, argv, env, NULL, timeout, out, error, error_len);
         }
         case OJH_GAME_GD5: {
             if (!o->gd5_python || !o->gd5_dir || !o->drivers_dir) {

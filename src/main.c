@@ -1268,6 +1268,23 @@ static int test_tpm(void) {
     }
     ojh_tpm_free(&t);
 
+    ojh_line od_protocol[] = {
+        {0.2, OJH_STDOUT, "[EVAL] map 1/1 [pangaea] seed=1395647406 countries=37 provinces=827"},
+        {0.9, OJH_STDOUT, "OJH players 37"},
+        {0.9, OJH_STDOUT, "OJH regions 827 provinces"},
+        {1.0, OJH_STDOUT, "OJH ready"},
+        {1.1, OJH_STDOUT, "OJH turn 1 0.050000"},
+        {1.2, OJH_STDOUT, "OJH turn 2 0.070000"},
+        {1.3, OJH_STDOUT, "OJH turn 3 0.090000"},
+    };
+    if (ojh_tpm_parse(OJH_GAME_OPENDOCTRINES, od_protocol, 7, &t) != 0 || t.turns != 3 || t.timed_turns != 3 ||
+        !close_to(t.play_seconds, 0.21) || t.players != 37 || t.regions != 827 || !close_to(t.boot_seconds, 1.0)) {
+        fprintf(stderr, "tpm: Open Doctrines OJH lines gave turns %d timed %d play %.3f players %d regions %ld boot %.3f\n",
+                t.turns, t.timed_turns, t.play_seconds, t.players, t.regions, t.boot_seconds);
+        failures++;
+    }
+    ojh_tpm_free(&t);
+
     ojh_line nothing[] = {{0.1, OJH_STDOUT, "Traceback (most recent call last):"}};
     if (ojh_tpm_parse(OJH_GAME_GD5, nothing, 1, &t) == 0) {
         fputs("tpm: a run with no turns was reported as a success\n", stderr);

@@ -1,0 +1,24 @@
+pkgname=ojh
+pkgver={{version}}
+pkgrel=1
+pkgdesc="{{summary}}"
+arch=('x86_64' 'aarch64')
+url="{{homepage}}"
+license=('{{license}}')
+depends=('glibc')
+makedepends=('cmake')
+source=("{{file_source}}::{{url_source}}")
+sha256sums=('{{sha256_source}}')
+
+build() {
+  cmake -S "ojh-$pkgver" -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+  cmake --build build
+}
+
+check() {
+  ctest --test-dir build --output-on-failure
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}

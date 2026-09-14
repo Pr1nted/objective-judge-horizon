@@ -24,7 +24,9 @@
 #include "sha256.h"
 #include "tpm.h"
 
-#define OJH_VERSION "0.1.0"
+#ifndef OJH_VERSION
+#define OJH_VERSION "0.0.0"
+#endif
 
 static int usage(void) {
     fputs("Objective Judge Horizon (OJH) " OJH_VERSION "\n"
@@ -103,6 +105,26 @@ static void folder_of(char *out, size_t n, const char *path) {
     if (!*out) snprintf(out, n, "/");
 }
 
+static void ignore_entry(const char *name, void *user) {
+    (void)name;
+    (void)user;
+}
+
+static const char *default_drivers_dir(void) {
+    static char found[4096];
+    char self[4096], real[4096], dir[4096];
+    if (ojh_self_path(self, sizeof self) != 0) return "drivers";
+    if (ojh_resolve_program(self, real, sizeof real) != 0) snprintf(real, sizeof real, "%s", self);
+    folder_of(dir, sizeof dir, real);
+    snprintf(found, sizeof found, "%.4000s/../share/ojh/drivers", dir);
+    if (ojh_list_dir(found, ignore_entry, NULL) == 0) return found;
+    snprintf(found, sizeof found, "%.4000s/drivers", dir);
+    if (ojh_list_dir(found, ignore_entry, NULL) == 0) return found;
+    snprintf(found, sizeof found, "%.4000s/../drivers", dir);
+    if (ojh_list_dir(found, ignore_entry, NULL) == 0) return found;
+    return "drivers";
+}
+
 static int cmd_tpm(int argc, char **argv) {
     if (argc < 3) return usage();
     ojh_game game = OJH_GAME_CUSTOM;
@@ -137,7 +159,7 @@ static int cmd_tpm(int argc, char **argv) {
     o.java = "java";
     o.javac = "javac";
     o.jar_tool = "jar";
-    o.drivers_dir = "drivers";
+    o.drivers_dir = default_drivers_dir();
     o.work_dir = work;
     static char self[1024];
     if (ojh_self_path(self, sizeof self) == 0) o.ojh_path = self;
@@ -275,7 +297,7 @@ static int cmd_footprint(int argc, char **argv) {
     o.java = "java";
     o.javac = "javac";
     o.jar_tool = "jar";
-    o.drivers_dir = "drivers";
+    o.drivers_dir = default_drivers_dir();
     o.work_dir = work;
     if (ojh_self_path(self, sizeof self) == 0) o.ojh_path = self;
     const char *out_path = NULL;
@@ -390,7 +412,7 @@ static int cmd_fps(int argc, char **argv) {
     o.java = "java";
     o.javac = "javac";
     o.jar_tool = "jar";
-    o.drivers_dir = "drivers";
+    o.drivers_dir = default_drivers_dir();
     o.work_dir = work;
     if (ojh_self_path(self, sizeof self) == 0) o.ojh_path = self;
     double seconds = 5.0;
@@ -501,7 +523,7 @@ static int cmd_net(int argc, char **argv) {
     o.java = "java";
     o.javac = "javac";
     o.jar_tool = "jar";
-    o.drivers_dir = "drivers";
+    o.drivers_dir = default_drivers_dir();
     o.work_dir = work;
     if (ojh_self_path(self, sizeof self) == 0) o.ojh_path = self;
     const char *out_path = NULL, *freeciv_client = "freeciv-gtk4", *log_path = NULL;

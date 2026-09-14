@@ -143,6 +143,26 @@ Each scorecard (`score-<game>.md`, `.txt`) shows every part, with a `.svg` badge
 `ojh footprint <game>` measures install size, the size of a save, and how long saving
 and loading take, each through the game's own code where it has one.
 
+## Installing
+
+Once OJH has a public release, install it with your package manager:
+
+```bash
+brew install Pr1nted/ojh/ojh
+```
+
+```powershell
+winget install Pr1nted.ObjectiveJudgeHorizon
+```
+
+```bash
+yay -S ojh
+```
+
+Scoop, Chocolatey, apt (`.deb`), dnf (`.rpm`), Nix, MacPorts and Alpine are covered too.
+[docs/packaging.md](docs/packaging.md) lists every command, and how a release is built
+and published.
+
 ## Your own game
 
 Any developer can put their game through OJH without changing OJH. Describe how to start

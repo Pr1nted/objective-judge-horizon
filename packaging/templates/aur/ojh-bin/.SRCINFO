@@ -1,0 +1,17 @@
+pkgbase = ojh-bin
+	pkgdesc = {{summary}}
+	pkgver = {{version}}
+	pkgrel = 1
+	url = {{homepage}}
+	arch = x86_64
+	arch = aarch64
+	license = {{license}}
+	depends = glibc
+	provides = ojh
+	conflicts = ojh
+	source_x86_64 = {{file_linux_x86_64}}::{{url_linux_x86_64}}
+	sha256sums_x86_64 = {{sha256_linux_x86_64}}
+	source_aarch64 = {{file_linux_aarch64}}::{{url_linux_aarch64}}
+	sha256sums_aarch64 = {{sha256_linux_aarch64}}
+
+pkgname = ojh-bin

@@ -116,7 +116,8 @@ static int footprint_opendoctrines(const ojh_tpm_options *o, ojh_footprint *f, c
         const char *argv[] = {o->od_server, "--load", save, "--check", "--data", o->od_data, NULL};
         double wall = 0;
         char why[1024] = "";
-        int code = run_and_read(argv, NULL, NULL, o->timeout_seconds > 0 ? o->timeout_seconds : 600, f, &wall, why,
+        if (o->work_dir) ojh_make_dir(o->work_dir);
+        int code = run_and_read(argv, NULL, o->work_dir, o->timeout_seconds > 0 ? o->timeout_seconds : 600, f, &wall, why,
                                 sizeof why);
         f->exit_code = code;
         if (code == 0) f->load_seconds = wall;

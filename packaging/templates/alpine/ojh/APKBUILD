@@ -1,0 +1,27 @@
+pkgname=ojh
+pkgver={{version}}
+pkgrel=0
+pkgdesc="{{summary}}"
+url="{{homepage}}"
+arch="all"
+license="{{license}}"
+makedepends="cmake samurai"
+source="{{url_source}}"
+builddir="$srcdir/ojh-$pkgver"
+
+build() {
+	cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+	cmake --build build
+}
+
+check() {
+	ctest --test-dir build --output-on-failure
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build
+}
+
+sha512sums="
+{{sha512_source}}  {{file_source}}
+"

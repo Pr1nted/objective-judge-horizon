@@ -1,0 +1,18 @@
+PackageIdentifier: Pr1nted.ObjectiveJudgeHorizon
+PackageVersion: {{version}}
+PackageLocale: en-US
+Publisher: Pr1nted
+PublisherUrl: https://github.com/Pr1nted
+PackageName: Objective Judge Horizon
+PackageUrl: {{homepage}}
+License: {{license}}
+ShortDescription: "{{summary}}"
+Description: "{{description}}"
+Moniker: ojh
+Tags:
+- benchmark
+- games
+- strategy
+- cli
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

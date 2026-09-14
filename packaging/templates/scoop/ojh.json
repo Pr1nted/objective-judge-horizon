@@ -1,0 +1,25 @@
+{
+    "version": "{{version}}",
+    "description": "{{summary}}",
+    "homepage": "{{homepage}}",
+    "license": "{{license}}",
+    "architecture": {
+        "64bit": {
+            "url": "{{url_windows_x64}}",
+            "hash": "{{sha256_windows_x64}}",
+            "extract_dir": "ojh-{{version}}-windows-x64"
+        }
+    },
+    "bin": "bin\\ojh.exe",
+    "checkver": {
+        "github": "{{homepage}}"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "{{homepage}}/releases/download/v$version/ojh-$version-windows-x64.zip",
+                "extract_dir": "ojh-$version-windows-x64"
+            }
+        }
+    }
+}

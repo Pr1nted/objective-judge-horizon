@@ -1,0 +1,106 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build, without the v"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: linux-x86_64
+          - os: ubuntu-24.04-arm
+            target: linux-aarch64
+          - os: macos-15
+            target: macos-universal
+            architectures: "arm64;x86_64"
+          - os: windows-2025
+            target: windows-x64
+    runs-on: ${{ matrix.os }}
+    name: build (${{ matrix.target }})
+    steps:
+      - uses: actions/checkout@v5
+      - name: Version
+        id: version
+        shell: bash
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then v="${GITHUB_REF_NAME#v}"; else v="${{ inputs.version }}"; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - name: Packaging tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm
+      - name: Configure
+        shell: bash
+        env:
+          ARCHITECTURES: ${{ matrix.architectures }}
+        run: |
+          extra=()
+          if [ -n "$ARCHITECTURES" ]; then extra+=("-DCMAKE_OSX_ARCHITECTURES=$ARCHITECTURES"); fi
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DOJH_RELEASE_VERSION=${{ steps.version.outputs.version }} "${extra[@]}"
+      - name: Build
+        run: cmake --build build --config Release
+      - name: Self-tests
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Package
+        shell: bash
+        working-directory: build
+        run: cpack -C Release -D CPACK_PACKAGE_FILE_NAME=ojh-${{ steps.version.outputs.version }}-${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: |
+            build/ojh-*.tar.gz
+            build/ojh-*.zip
+            build/*.deb
+            build/*.rpm
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Version
+        id: version
+        shell: bash
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then v="${GITHUB_REF_NAME#v}"; else v="${{ inputs.version }}"; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Source archive
+        run: git archive --format=tar.gz --prefix=ojh-${{ steps.version.outputs.version }}/ -o dist/ojh-${{ steps.version.outputs.version }}-source.tar.gz HEAD
+      - name: Manifests
+        env:
+          OJH_LICENSE: ${{ vars.OJH_LICENSE }}
+        run: |
+          v=${{ steps.version.outputs.version }}
+          python3 packaging/render.py --version "$v" --dist dist --base-url "https://github.com/${{ github.repository }}/releases/download/v$v" --out dist/packaging
+          tar -czf "dist/ojh-$v-manifests.tar.gz" -C dist packaging
+          rm -rf dist/packaging
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum ojh-* *.deb *.rpm > SHA256SUMS
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=${{ steps.version.outputs.version }}
+          if gh release view "v$v" > /dev/null 2>&1; then
+            gh release upload "v$v" dist/* --clobber
+          else
+            gh release create "v$v" dist/* --title "OJH $v" --notes "Objective Judge Horizon $v. Install with your package manager or download the archive for your system; SHA256SUMS lists every file." --target "$GITHUB_SHA"
+          fi

@@ -1,0 +1,14 @@
+pkgbase = ojh
+	pkgdesc = {{summary}}
+	pkgver = {{version}}
+	pkgrel = 1
+	url = {{homepage}}
+	arch = x86_64
+	arch = aarch64
+	license = {{license}}
+	makedepends = cmake
+	depends = glibc
+	source = {{file_source}}::{{url_source}}
+	sha256sums = {{sha256_source}}
+
+pkgname = ojh

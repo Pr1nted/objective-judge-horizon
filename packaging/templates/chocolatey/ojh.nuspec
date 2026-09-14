@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>ojh</id>
+    <version>{{version}}</version>
+    <title>Objective Judge Horizon</title>
+    <authors>Pr1nted</authors>
+    <owners>Pr1nted</owners>
+    <projectUrl>{{homepage}}</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <tags>benchmark games strategy cli</tags>
+    <summary>{{summary}}</summary>
+    <description>{{description}}</description>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

@@ -1,0 +1,22 @@
+pkgname=ojh-bin
+pkgver={{version}}
+pkgrel=1
+pkgdesc="{{summary}}"
+arch=('x86_64' 'aarch64')
+url="{{homepage}}"
+license=('{{license}}')
+depends=('glibc')
+provides=('ojh')
+conflicts=('ojh')
+source_x86_64=("{{file_linux_x86_64}}::{{url_linux_x86_64}}")
+source_aarch64=("{{file_linux_aarch64}}::{{url_linux_aarch64}}")
+sha256sums_x86_64=('{{sha256_linux_x86_64}}')
+sha256sums_aarch64=('{{sha256_linux_aarch64}}')
+
+package() {
+  local dir="ojh-$pkgver-linux-$CARCH"
+  install -Dm755 "$dir/bin/ojh" "$pkgdir/usr/bin/ojh"
+  mkdir -p "$pkgdir/usr/share"
+  cp -r "$dir/share/ojh" "$pkgdir/usr/share/ojh"
+  cp -r "$dir/share/doc" "$pkgdir/usr/share/doc"
+}

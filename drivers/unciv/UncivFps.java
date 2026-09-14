@@ -103,6 +103,7 @@ public final class UncivFps {
         int warm;
         long last;
         long sceneEnd;
+        long warmUntil;
         int stage;
         volatile WorldScreen loaded;
         volatile GameInfo lateGame;
@@ -138,10 +139,14 @@ public final class UncivFps {
             frames.clear();
             warm = warmup;
             sceneEnd = 0;
+            warmUntil = System.nanoTime() + 2_000_000_000L;
         }
 
         boolean done(long now) {
-            if (warm > 0) return false;
+            if (warm > 0 || now < warmUntil) {
+                frames.clear();
+                return false;
+            }
             if (sceneEnd == 0) sceneEnd = now + (long) (seconds * 1e9);
             return now >= sceneEnd;
         }
@@ -228,6 +233,7 @@ public final class UncivFps {
             switch (stage) {
                 case 0:
                     if (getScreen() instanceof MainMenuScreen) {
+                        Gdx.graphics.setWindowedMode(1600, 900);
                         say("OJH renderer " + Gdx.graphics.getGLVersion().getRendererString() + ", OpenGL "
                                 + Gdx.graphics.getGLVersion().getMajorVersion() + "." + Gdx.graphics.getGLVersion().getMinorVersion()
                                 + " via LWJGL3");
@@ -361,7 +367,7 @@ public final class UncivFps {
 
         Thread watchdog = new Thread(() -> {
             try {
-                Thread.sleep((long) ((seconds * 12 + 300) * 1000));
+                Thread.sleep((long) ((seconds * 12 + 1200) * 1000));
             } catch (InterruptedException ignored) {
                 return;
             }

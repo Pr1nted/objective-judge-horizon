@@ -1,0 +1,19 @@
+PortSystem          1.0
+PortGroup           cmake 1.1
+
+name                ojh
+version             {{version}}
+revision            0
+categories          devel games
+license             {{license_macports}}
+maintainers         nomaintainer
+description         {{summary}}
+long_description    {{description}}
+homepage            {{homepage}}
+
+master_sites        {{base_url}}
+distname            ojh-${version}-source
+worksrcdir          ojh-${version}
+
+checksums           sha256  {{sha256_source}} \
+                    size    {{size_source}}

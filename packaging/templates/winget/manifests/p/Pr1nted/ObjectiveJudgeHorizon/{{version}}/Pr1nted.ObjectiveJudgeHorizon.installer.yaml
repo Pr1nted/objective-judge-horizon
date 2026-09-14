@@ -1,0 +1,13 @@
+PackageIdentifier: Pr1nted.ObjectiveJudgeHorizon
+PackageVersion: {{version}}
+InstallerType: zip
+NestedInstallerType: portable
+NestedInstallerFiles:
+- RelativeFilePath: ojh-{{version}}-windows-x64\bin\ojh.exe
+  PortableCommandAlias: ojh
+Installers:
+- Architecture: x64
+  InstallerUrl: {{url_windows_x64}}
+  InstallerSha256: {{sha256_windows_x64_upper}}
+ManifestType: installer
+ManifestVersion: 1.6.0

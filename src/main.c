@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "json.h"
+#include "jsonread.h"
 #include "machine.h"
 #include "netmeter.h"
 #include "procmeter.h"
@@ -27,10 +28,10 @@ static int usage(void) {
           "                                         count a netcode's traffic on loopback\n"
           "  ojh tpm <opendoctrines|gd5|freeciv|unciv> [--turns N] [--seed S] [--players P] [--timeout S]\n"
           "          [--od-server PATH --od-data DIR] [--gd5-python PATH --gd5-dir DIR]\n"
-          "          [--freeciv-server PATH] [--unciv-jar PATH --java PATH --javac PATH]\n"
+          "          [--freeciv-server PATH] [--unciv-jar PATH --java PATH --javac PATH --jar PATH]\n"
           "          [--drivers DIR] [--work DIR] [--out FILE]\n"
           "                                         turns per minute, every player AI\n"
-          "  ojh selftest sha256|json|relay|procmeter|runner|tpm\n",
+          "  ojh selftest sha256|json|jsonread|relay|procmeter|runner|tpm\n",
           stderr);
     return 2;
 }
@@ -92,6 +93,7 @@ static int cmd_tpm(int argc, char **argv) {
     o.freeciv_server = "freeciv-server";
     o.java = "java";
     o.javac = "javac";
+    o.jar_tool = "jar";
     o.drivers_dir = "drivers";
     o.work_dir = work;
     const char *out_path = NULL;
@@ -114,6 +116,7 @@ static int cmd_tpm(int argc, char **argv) {
         else if (strcmp(a, "--unciv-jar") == 0) o.unciv_jar = v;
         else if (strcmp(a, "--java") == 0) o.java = v;
         else if (strcmp(a, "--javac") == 0) o.javac = v;
+        else if (strcmp(a, "--jar") == 0) o.jar_tool = v;
         else if (strcmp(a, "--drivers") == 0) o.drivers_dir = v;
         else if (strcmp(a, "--work") == 0) o.work_dir = v;
         else if (strcmp(a, "--out") == 0) out_path = v;
@@ -172,6 +175,85 @@ static int cmd_tpm(int argc, char **argv) {
 /* ---- self-tests: each proves one piece against a known answer */
 
 static int close_to(double a, double b) { return a - b < 1e-6 && b - a < 1e-6; }
+
+/* Reading JSON back: values, escapes and UTF-8, what must be refused, and OJH's own output. */
+static int test_jsonread(void) {
+    int failures = 0;
+    char error[256];
+    const char *doc =
+        "\xEF\xBB\xBF{\"metric\": \"tpm\", \"result\": {\"tpm\": 237.74, \"players\": 8, \"regions\": null, "
+        "\"per_turn\": {\"median_seconds\": 0.2073}, \"list\": [1, -2.5e1, true, false], "
+        "\"name\": \"Gods \\u0026 Kings \\ud83c\\udfae \\\"quoted\\\"\"}}";
+    ojh_jvalue *root = ojh_jparse(doc, strlen(doc), error, sizeof error);
+    if (!root) {
+        fprintf(stderr, "jsonread: a valid document was refused: %s\n", error);
+        return 1;
+    }
+    const ojh_jvalue *list = ojh_jpath(root, "result.list");
+    if (strcmp(ojh_jstring(ojh_jpath(root, "metric"), ""), "tpm") != 0) failures++;
+    if (!close_to(ojh_jnumber(ojh_jpath(root, "result.tpm"), 0), 237.74)) failures++;
+    if (!close_to(ojh_jnumber(ojh_jpath(root, "result.players"), 0), 8)) failures++;
+    if (ojh_jpresent(ojh_jpath(root, "result.regions")) || ojh_jpresent(ojh_jpath(root, "result.missing"))) failures++;
+    if (!close_to(ojh_jnumber(ojh_jpath(root, "result.per_turn.median_seconds"), 0), 0.2073)) failures++;
+    if (!list || list->type != OJH_JARRAY || list->count != 4 || !close_to(list->items[1].number, -25.0) ||
+        list->items[2].type != OJH_JBOOL || !close_to(list->items[2].number, 1)) {
+        failures++;
+    }
+    if (strcmp(ojh_jstring(ojh_jpath(root, "result.name"), ""), "Gods & Kings \xF0\x9F\x8E\xAE \"quoted\"") != 0) {
+        fprintf(stderr, "jsonread: escapes decoded as \"%s\"\n", ojh_jstring(ojh_jpath(root, "result.name"), ""));
+        failures++;
+    }
+    ojh_jfree(root);
+
+    const char *bad[] = {"{\"a\": [1, 2,}", "{} x", "{\"a\" 1}", "[\"\\ud800\"]", "01x", "\"unterminated"};
+    for (size_t i = 0; i < sizeof bad / sizeof bad[0]; i++) {
+        ojh_jvalue *v = ojh_jparse(bad[i], strlen(bad[i]), error, sizeof error);
+        if (v || !strstr(error, "at byte")) {
+            fprintf(stderr, "jsonread: accepted or did not explain %s\n", bad[i]);
+            ojh_jfree(v);
+            failures++;
+        }
+    }
+    char deep[201];
+    memset(deep, '[', 200);
+    deep[200] = '\0';
+    ojh_jvalue *d = ojh_jparse(deep, 200, error, sizeof error);
+    if (d || !strstr(error, "nested too deeply")) {
+        ojh_jfree(d);
+        failures++;
+    }
+
+    /* What ojh_json writes, ojh_jparse_file must read back. */
+    char path[512];
+    const char *dir = getenv("TMPDIR");
+    if (!dir) dir = getenv("TEMP");
+    if (!dir) dir = ".";
+    snprintf(path, sizeof path, "%s/ojh-jsonread-selftest.json", dir);
+    FILE *f = fopen(path, "wb");
+    if (!f) return 1;
+    ojh_json w;
+    ojh_json_init(&w, f);
+    ojh_json_object(&w);
+    ojh_json_key(&w, "machine"); ojh_json_object(&w); ojh_json_key(&w, "cpu"); ojh_json_string(&w, "Apple M1 Pro"); ojh_json_end_object(&w);
+    ojh_json_key(&w, "tpm"); ojh_json_double(&w, 967.74, 2);
+    ojh_json_end_object(&w);
+    fclose(f);
+    ojh_jvalue *back = ojh_jparse_file(path, error, sizeof error);
+    remove(path);
+    if (!back || strcmp(ojh_jstring(ojh_jpath(back, "machine.cpu"), ""), "Apple M1 Pro") != 0 ||
+        !close_to(ojh_jnumber(ojh_jget(back, "tpm"), 0), 967.74)) {
+        fprintf(stderr, "jsonread: OJH's own output did not read back (%s)\n", error);
+        failures++;
+    }
+    ojh_jfree(back);
+
+    if (failures) {
+        fprintf(stderr, "jsonread: %d check(s) failed\n", failures);
+        return 1;
+    }
+    puts("jsonread: ok (values, escapes and UTF-8 surrogate pairs; malformed, trailing and too-deep input refused; OJH's output reads back)");
+    return 0;
+}
 
 /* Each game's output format, as its program prints it, through its parser. */
 static int test_tpm(void) {
@@ -564,6 +646,7 @@ int main(int argc, char **argv) {
         if (strcmp(argv[2], "busy-child") == 0) return busy_child();
         if (strcmp(argv[2], "runner") == 0) return test_runner();
         if (strcmp(argv[2], "tpm") == 0) return test_tpm();
+        if (strcmp(argv[2], "jsonread") == 0) return test_jsonread();
         if (strcmp(argv[2], "print-lines") == 0) return print_lines();
         if (strcmp(argv[2], "sleep-long") == 0) {
             ojh_sleep(60);

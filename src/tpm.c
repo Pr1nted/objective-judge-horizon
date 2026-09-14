@@ -136,6 +136,11 @@ static int parse_opendoctrines(const ojh_line *lines, size_t count, ojh_tpm *t) 
         if (strstr(s, "[EVAL] map ") && number_after(s, "countries=", &v)) {
             t->players = (int)v;
             t->boot_seconds = lines[i].t;
+            /* Printed since Open Doctrines added it for OJH; older builds leave the map size n/a. */
+            if (number_after(s, "provinces=", &v) && v > 0) {
+                t->regions = (long)v;
+                snprintf(t->region_kind, sizeof t->region_kind, "provinces");
+            }
         }
     }
     t->turns = last_turns;

@@ -88,38 +88,60 @@ the **highest** turn of the run, with the median between them.
 
 ### OJH score: one number per game
 
-Every game gets its own score, built from its own result file and nothing else. Each
+Every game gets its own score, built from its own result files and nothing else. Each
 part is measured against a fixed reference level written into `src/score.c`, never
 against the other games, so adding, removing or re-running a game cannot move anyone
 else's score.
 
-| Part (score version 1) | Weight | Worth 1,000 points |
-|---|---|---|
-| Turn throughput: TPM × players | 40% | 2,000 player-turns/min |
-| World throughput: TPM × map regions | 25% | 200,000 region-turns/min |
-| Late-game pace: early ÷ late median turn time | 15% | 0.5 |
-| Steadiness: median ÷ 95th-percentile turn time | 10% | 0.5 |
-| Start-up: seconds to the first turn | 10% | 10 s |
+| Part (score version 2) | Measured by | Weight | Worth 1,000 points |
+|---|---|---|---|
+| Turn throughput: turns per minute × players | `ojh tpm` | 22% | 2,000 player-turns/min |
+| World throughput: turns per minute × map regions | `ojh tpm` | 13% | 200,000 region-turns/min |
+| Late-game pace: early ÷ late median turn time | `ojh tpm` | 8% | 0.5 |
+| Steadiness: median ÷ 95th-percentile turn time | `ojh tpm` | 5% | 0.5 |
+| Start-up: seconds to the first turn | `ojh tpm` | 5% | 10 s |
+| CPU time per player-turn | `ojh tpm` | 6% | 10 ms |
+| Peak memory | `ojh tpm` | 8% | 2 GiB |
+| Frame rate on the map | `ojh fps` | 12% | 60 fps |
+| Smoothness: 1% low frame rate | `ojh fps` | 8% | 30 fps |
+| Data per turn, highest | `ojh net` | 9% | 256 KiB |
+| Turn delivery time | `ojh net` | 4% | 100 ms |
 
-- **Points**: each part scores 1000 × log2(1 + value ÷ reference). The reference is
-  worth 1,000, three times it 2,000, seven times it 3,000, and nothing scores below zero.
-- **Hardware**: speeds are first put on OJH's reference CPU with the machine's
-  single-core reference score, so a faster computer does not make a faster game.
-- **Total**: the weighted mean of the parts the game reports. A part a game does not
-  report is left out and named on the scorecard, never counted as zero.
+- **Points**: each part scores 1000 × log2(1 + value ÷ reference), with the ratio turned
+  around where less is better. The reference is worth 1,000, three times it 2,000,
+  seven times it 3,000, and nothing scores below zero.
+- **Hardware**: CPU-bound figures are first put on OJH's reference CPU with the
+  machine's single-core reference score, so a faster computer does not make a faster
+  game. Frame rate, memory and data are used as measured.
+- **Total**: the weighted mean of the parts the game has results for. A part a game was
+  not measured for is left out and named on the scorecard, never counted as zero.
 - **Provisional**: fewer than 100 turns timed, a run that did not finish cleanly, or no
   CPU reference score.
 - **Versions**: any change to a part, weight or reference level makes a new score
-  version, and scores of different versions are not compared. FPS, NIPM, DPT and memory
-  join as parts when they are measured.
+  version, and scores of different versions are not compared.
 
 Each scorecard (`score-<game>.md`, `.txt`) shows every part, with a `.svg` badge.
 
-### Everything else a turn-based strategy player feels
+### The report
 
-Cold start to main menu, loading a new game, save and load time, save file size,
-peak memory, CPU use while idle on the map and during a turn, install size, map
-scale (regions and players), and AI turn time per player.
+`ojh report <folder>` reads every result file in the folder and writes `report.md`,
+`report.txt` and a `graphs/` folder. For every game it shows:
+
+- **At a glance**: the score, how many statistics the game came first or last on, and
+  where it went best and worst.
+- **What went best and what went worst**: for every statistic, the best and the worst
+  game and how far apart they are, and for every game, its clearest leads and widest
+  gaps.
+- **A section per group** (turn speed, CPU and memory, frame rate, network,
+  footprint): a table with every game's place on every statistic, a graph per statistic
+  sorted best first, a turn-time line graph and a data-per-turn range graph, what each
+  statistic means, and how each game was measured.
+- **Not measured yet**: which measurements are missing and the command that takes them.
+
+### Footprint
+
+`ojh footprint <game>` measures install size, the size of a save, and how long saving
+and loading take, each through the game's own code where it has one.
 
 ## Your own game
 
@@ -195,8 +217,20 @@ game spec file), and
 build/ojh report results/run
 ```
 
-writes `report.md`, `report.txt` and every game's scorecard from the result files in
-that folder. `build/ojh score results/run/freeciv.json` scores a single result on its
+writes `report.md`, `report.txt`, the graphs and every game's scorecard from the result
+files in that folder. The other measurements work the same way:
+
+```bash
+build/ojh fps gd5 --gd5-python gd5-venv/bin/python --gd5-dir Greater-Diplomacy-5 --out results/run/gd5-fps.json
+```
+
+```bash
+build/ojh net freeciv --turns 20 --clients 2 --out results/run/freeciv-net.json
+```
+
+```bash
+build/ojh footprint unciv --unciv-jar Unciv.jar --out results/run/unciv-footprint.json
+``` `build/ojh score results/run/freeciv.json` scores a single result on its
 own.
 
 ```bash

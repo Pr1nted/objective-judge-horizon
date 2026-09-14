@@ -231,7 +231,11 @@ int ojh_unciv_prepare(const ojh_tpm_options *o, char *classpath, size_t classpat
     if (run_and_read(extract, NULL, assets, 600, &scratch, NULL, NULL, 0) != 0) {
         return fail(error, error_len, "could not extract Unciv's rulesets from the jar");
     }
-    const char *compile[] = {o->javac, "-nowarn", "-cp", o->unciv_jar, "-d", classes, source, NULL};
+    char fps_source[4400];
+    join_path(fps_source, sizeof fps_source, o->drivers_dir, "unciv/UncivFps.java");
+    uint64_t fps_bytes = 0, fps_files = 0;
+    int has_fps = ojh_path_size(fps_source, NULL, &fps_bytes, &fps_files) == 0;
+    const char *compile[] = {o->javac, "-nowarn", "-cp", o->unciv_jar, "-d", classes, source, has_fps ? fps_source : NULL, NULL};
     if (run_and_read(compile, NULL, NULL, 600, &scratch, NULL, NULL, 0) != 0) {
         return fail(error, error_len, "the Unciv driver did not compile");
     }

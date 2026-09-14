@@ -12,7 +12,7 @@
 static const char *const TOP_KEYS[] = {"ojh_game_spec", "id", "name", "version", "license", "homepage", "notes",
                                        "command", "working_directory", "environment", "turns", "players",
                                        "regions", "region_kind", "default_turns", "timeout_seconds",
-                                       "install", "footprint_command", "network"};
+                                       "install", "footprint_command", "network", "fps_command"};
 static const char *const TURN_KEYS[] = {"from", "turn_ends", "game_starts", "stream", "players_after",
                                         "regions_after"};
 static const char *const PLACEHOLDERS[] = {"turns", "seed", "players", "work", "spec_dir", "ojh", "server_port", "relay_port", "client"};
@@ -318,6 +318,9 @@ static int read_spec(const ojh_jvalue *root, ojh_gamespec *s, char *error, size_
         return -1;
     }
     if (read_network(ojh_jget(root, "network"), s, error, error_len) != 0) return -1;
+    if (string_list(ojh_jget(root, "fps_command"), "fps_command", 1, &s->fps_command, &s->fps_count, error, error_len) != 0) {
+        return -1;
+    }
 
     double number;
     const ojh_jvalue *players = ojh_jget(root, "players");
@@ -549,6 +552,10 @@ void ojh_gamespec_free(ojh_gamespec *s) {
     s->net_ready_when = s->net_connected_when = NULL;
     s->net_server_count = s->net_client_count = s->net_after_connect_count = 0;
     s->has_network = 0;
+    for (int i = 0; i < s->fps_count; i++) free(s->fps_command[i]);
+    free(s->fps_command);
+    s->fps_command = NULL;
+    s->fps_count = 0;
     s->install_count = s->footprint_count = 0;
     s->command = s->environment = NULL;
     s->working_directory = s->turn_ends = s->game_starts = s->players_after = s->regions_after = NULL;

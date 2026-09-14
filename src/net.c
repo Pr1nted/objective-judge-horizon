@@ -106,9 +106,11 @@ int ojh_net_analyse(const ojh_net_event *events, size_t count, const double *mar
                     size_t i = 0;
                     while (i < count && (events[i].t < marks[k] || !events[i].direction)) i++;
                     if (i >= count || events[i].t - marks[k] > DELIVERY_WINDOW_SECONDS) continue;
+                    if (k + 1 < mark_count && events[i].t >= marks[k + 1]) continue;
                     double end = events[i].t;
                     for (size_t j = i + 1; j < count; j++) {
                         if (!events[j].direction) continue;
+                        if (k + 1 < mark_count && events[j].t >= marks[k + 1]) break;
                         if (events[j].t - end > DELIVERY_GAP_SECONDS) break;
                         end = events[j].t;
                     }
@@ -118,7 +120,9 @@ int ojh_net_analyse(const ojh_net_event *events, size_t count, const double *mar
                     qsort(delivery, (size_t)delivered, sizeof *delivery, compare_double);
                     out->has_delivery = 1;
                     out->delivery_median = delivery[delivered / 2];
-                    out->delivery_p95 = delivery[(int)((delivered - 1) * 0.95)];
+                    int p95 = (int)((delivered - 1) * 0.95);
+                    if (p95 < delivered - 1 && (delivered - 1) * 0.95 > p95) p95++;
+                    out->delivery_p95 = delivery[p95];
                 }
             }
         }
@@ -205,6 +209,22 @@ static int is_turn_line(const ojh_net_plan *p, const char *text) {
     return p->turn_ends && strstr(text, p->turn_ends) != NULL;
 }
 
+static void write_log(const ojh_net_plan *p, ojh_run *r) {
+    if (!p->log_path) return;
+    FILE *f = fopen(p->log_path, "wb");
+    if (!f) return;
+    char text[LINE_TEXT];
+    size_t n = ojh_run_line_count_now(r);
+    for (size_t i = 0; i < n; i++) {
+        double t;
+        int stream;
+        if (ojh_run_copy_line(r, i, text, sizeof text, &t, &stream)) {
+            fprintf(f, "%10.4f %s %s\n", t, stream == OJH_STDERR ? "err" : "out", text);
+        }
+    }
+    fclose(f);
+}
+
 static int run_reported(const ojh_net_plan *p, ojh_net *out, char *error, size_t error_len) {
     ojh_run *server = ojh_run_start(p->server, p->server_env, p->server_cwd);
     if (!server) return fail(error, error_len, "the game did not start (is the path right?)");
@@ -215,6 +235,8 @@ static int run_reported(const ojh_net_plan *p, ojh_net *out, char *error, size_t
     mark_list marks = {0};
     ojh_net_event *events = calloc(lines * 2 + 1, sizeof *events);
     size_t count = 0;
+    double last_turn = -1;
+    int data_lines = 0;
     for (size_t i = 0; events && i < lines; i++) {
         const ojh_line *l = ojh_run_line(server, i);
         const char *v = protocol_value(l->text, p->data_line ? p->data_line : "data");
@@ -223,12 +245,15 @@ static int run_reported(const ojh_net_plan *p, ojh_net *out, char *error, size_t
             if (sscanf(v, "%llu %llu", &up, &down) >= 1) {
                 ojh_net_event a = {base + l->t, 0, up > 0xFFFFFFFFull ? 0xFFFFFFFFu : (uint32_t)up};
                 ojh_net_event b = {base + l->t, 1, down > 0xFFFFFFFFull ? 0xFFFFFFFFu : (uint32_t)down};
+                add_mark(&marks, base + l->t - 1e-6);
+                data_lines++;
                 if (up) events[count++] = a;
                 if (down) events[count++] = b;
             }
         }
-        if (is_turn_line(p, l->text)) add_mark(&marks, base + l->t);
+        if (is_turn_line(p, l->text)) last_turn = base + l->t;
     }
+    if (data_lines > 0 && last_turn >= 0) add_mark(&marks, last_turn + 1e-6);
     if (code != 0 && error && error_len) {
         size_t at = (size_t)snprintf(error, error_len, "exit %d; last lines:", code);
         for (size_t i = lines > 4 ? lines - 4 : 0; i < lines && at < error_len; i++) {
@@ -236,6 +261,7 @@ static int run_reported(const ojh_net_plan *p, ojh_net *out, char *error, size_t
         }
     }
     int status = ojh_net_analyse(events, count, marks.marks, marks.count, p->clients, 0, out);
+    write_log(p, server);
     free(events);
     free(marks.marks);
     ojh_run_free(server);
@@ -328,15 +354,16 @@ int ojh_net_run(const ojh_net_plan *p, ojh_net *out, char *error, size_t error_l
     mark_list marks = {0};
     size_t read_lines = 0;
     char text[LINE_TEXT];
+    int finished = 0;
     while (ojh_now() < deadline) {
         size_t n = ojh_run_line_count_now(server);
         for (; read_lines < n; read_lines++) {
             double t;
-            if (ojh_run_copy_line(server, read_lines, text, sizeof text, &t, NULL) && is_turn_line(p, text)) {
-                add_mark(&marks, ojh_run_started(server) + t);
-            }
+            if (!ojh_run_copy_line(server, read_lines, text, sizeof text, &t, NULL)) continue;
+            if (is_turn_line(p, text) && marks.count <= p->turns) add_mark(&marks, ojh_run_started(server) + t);
+            if (p->finished_when && strstr(text, p->finished_when)) finished = 1;
         }
-        if (marks.count > p->turns || !ojh_run_running(server)) break;
+        if (marks.count > p->turns || finished || !ojh_run_running(server)) break;
         ojh_sleep(0.02);
     }
     ojh_sleep(1.0);
@@ -371,6 +398,7 @@ stop_clients:
         ojh_run_free(clients[c]);
     }
 finish:
+    write_log(p, server);
     ojh_run_close_input(server);
     out->exit_code = ojh_run_wait(server, ojh_run_running(server) ? 5.0 : 0.001);
     ojh_run_free(server);

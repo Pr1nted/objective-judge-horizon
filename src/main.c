@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "footprint.h"
+#include "fps.h"
 #include "gamespec.h"
 #include "net.h"
 #include "json.h"
@@ -41,12 +42,14 @@ static int usage(void) {
           "                                         result files in a folder\n"
           "  ojh footprint <game|your-game.json> [the tpm options] [--od-save FILE] [--freeciv-prefix DIR]\n"
           "                                         install size, save size, save time and load time\n"
-          "  ojh net <game|your-game.json> [the tpm options] [--clients N] [--freeciv-client PATH]\n"
+          "  ojh fps <game|your-game.json> [the tpm options] [--seconds S]\n"
+          "                                         frame rate in the same scenes in every game\n"
+          "  ojh net <game|your-game.json> [the tpm options] [--clients N] [--freeciv-client PATH] [--log FILE]\n"
           "                                         netcode on loopback: data per turn, information per minute, delivery\n"
           "  ojh score <result.json>... [--out DIR] each game's own OJH score and scorecard\n"
           "  ojh spec new <your-game.json>          a game spec to fill in, for putting your own game through OJH\n"
           "  ojh spec check <your-game.json>        what OJH will run for that spec\n"
-          "  ojh selftest sha256|json|jsonread|relay|procmeter|runner|tpm|report|spec|score|footprint|net\n",
+          "  ojh selftest sha256|json|jsonread|relay|procmeter|runner|tpm|report|spec|score|footprint|net|fps\n",
           stderr);
     return 2;
 }
@@ -358,6 +361,109 @@ static int cmd_footprint(int argc, char **argv) {
     return status == 0 ? 0 : 1;
 }
 
+static int cmd_fps(int argc, char **argv) {
+    if (argc < 3) return usage();
+    ojh_game game = OJH_GAME_CUSTOM;
+    ojh_gamespec spec;
+    memset(&spec, 0, sizeof spec);
+    int from_spec = ends_with(argv[2], ".json");
+    if (from_spec) {
+        char why[1024];
+        if (ojh_gamespec_load(argv[2], &spec, why, sizeof why) != 0) {
+            fprintf(stderr, "fps: %s\n", why);
+            return 2;
+        }
+    } else if (ojh_game_parse(argv[2], &game) != 0) {
+        fprintf(stderr, "fps: unknown game '%s'\n", argv[2]);
+        return 2;
+    }
+    const char *tmp = getenv("TMPDIR");
+    if (!tmp) tmp = getenv("TEMP");
+    if (!tmp) tmp = ".";
+    static char work[1024], self[1024];
+    snprintf(work, sizeof work, "%s/ojh-work", tmp);
+    ojh_tpm_options o;
+    memset(&o, 0, sizeof o);
+    o.turns = 20;
+    o.seed = 20260914u;
+    o.players = 8;
+    o.java = "java";
+    o.javac = "javac";
+    o.jar_tool = "jar";
+    o.drivers_dir = "drivers";
+    o.work_dir = work;
+    if (ojh_self_path(self, sizeof self) == 0) o.ojh_path = self;
+    double seconds = 5.0;
+    const char *out_path = NULL;
+    for (int i = 3; i < argc; i += 2) {
+        const char *a = argv[i];
+        const char *v = i + 1 < argc ? argv[i + 1] : NULL;
+        if (!v) {
+            fprintf(stderr, "fps: %s needs a value\n", a);
+            return 2;
+        }
+        if (strcmp(a, "--turns") == 0) o.turns = atoi(v);
+        else if (strcmp(a, "--seconds") == 0) seconds = atof(v);
+        else if (strcmp(a, "--seed") == 0) o.seed = (unsigned)strtoul(v, NULL, 10);
+        else if (strcmp(a, "--players") == 0) o.players = atoi(v);
+        else if (strcmp(a, "--timeout") == 0) o.timeout_seconds = atof(v);
+        else if (strcmp(a, "--gd5-python") == 0) o.gd5_python = v;
+        else if (strcmp(a, "--gd5-dir") == 0) o.gd5_dir = v;
+        else if (strcmp(a, "--unciv-jar") == 0) o.unciv_jar = v;
+        else if (strcmp(a, "--java") == 0) o.java = v;
+        else if (strcmp(a, "--javac") == 0) o.javac = v;
+        else if (strcmp(a, "--jar") == 0) o.jar_tool = v;
+        else if (strcmp(a, "--drivers") == 0) o.drivers_dir = v;
+        else if (strcmp(a, "--work") == 0) o.work_dir = v;
+        else if (strcmp(a, "--out") == 0) out_path = v;
+        else if (strcmp(a, "--od-server") == 0 || strcmp(a, "--od-data") == 0 || strcmp(a, "--freeciv-server") == 0) continue;
+        else {
+            fprintf(stderr, "fps: unknown option %s\n", a);
+            return 2;
+        }
+    }
+    if (o.turns < 0) o.turns = 0;
+    ojh_make_dir(o.work_dir);
+    const char *name = from_spec ? spec.name : ojh_game_name(game);
+    fprintf(stderr, "fps: %s\n", name);
+    ojh_fps result;
+    char error[2048] = "";
+    int status = from_spec ? ojh_fps_run_spec(&spec, &o, seconds, &result, error, sizeof error)
+                           : ojh_fps_run(game, &o, seconds, &result, error, sizeof error);
+    ojh_machine m;
+    ojh_reference ref;
+    ojh_machine_read(&m);
+    ojh_reference_measure(&ref, 3.0);
+    FILE *out = out_path ? fopen(out_path, "wb") : stdout;
+    if (out) {
+        ojh_json w;
+        ojh_json_init(&w, out);
+        ojh_json_object(&w);
+        ojh_json_key(&w, "ojh_version"); ojh_json_string(&w, OJH_VERSION);
+        ojh_json_key(&w, "metric"); ojh_json_string(&w, "fps");
+        ojh_json_key(&w, "machine"); ojh_machine_json(&w, &m, &ref);
+        ojh_json_key(&w, "settings");
+        ojh_json_object(&w);
+        ojh_json_key(&w, "seconds_per_scene"); ojh_json_double(&w, seconds, 2);
+        ojh_json_key(&w, "late_game_turns"); ojh_json_int(&w, o.turns);
+        ojh_json_end_object(&w);
+        ojh_json_key(&w, "result"); ojh_fps_json(&w, &result);
+        ojh_json_key(&w, "error");
+        if (status == 0) ojh_json_null(&w);
+        else ojh_json_string(&w, error);
+        ojh_json_end_object(&w);
+        if (out != stdout) fclose(out);
+    }
+    if (status == 0) {
+        fprintf(stderr, "fps: %s %d scenes, map %.1f fps, 1%% low %.1f fps\n", name, result.scene_count,
+                ojh_fps_map_average(&result), ojh_fps_worst_low(&result));
+    } else {
+        fprintf(stderr, "fps: %s: %s\n", name, error);
+    }
+    ojh_gamespec_free(&spec);
+    return status == 0 ? 0 : 1;
+}
+
 static uint16_t free_port(void) {
     uint16_t port = 0;
     ojh_socket s = ojh_listen_loopback(0, &port);
@@ -398,7 +504,7 @@ static int cmd_net(int argc, char **argv) {
     o.drivers_dir = "drivers";
     o.work_dir = work;
     if (ojh_self_path(self, sizeof self) == 0) o.ojh_path = self;
-    const char *out_path = NULL, *freeciv_client = "freeciv-gtk4";
+    const char *out_path = NULL, *freeciv_client = "freeciv-gtk4", *log_path = NULL;
     int clients = from_spec && spec.net_clients > 0 ? spec.net_clients : 2;
     for (int i = 3; i < argc; i += 2) {
         const char *a = argv[i];
@@ -411,6 +517,7 @@ static int cmd_net(int argc, char **argv) {
         else if (strcmp(a, "--seed") == 0) o.seed = (unsigned)strtoul(v, NULL, 10);
         else if (strcmp(a, "--players") == 0) o.players = atoi(v);
         else if (strcmp(a, "--clients") == 0) clients = atoi(v);
+        else if (strcmp(a, "--log") == 0) log_path = v;
         else if (strcmp(a, "--timeout") == 0) o.timeout_seconds = atof(v);
         else if (strcmp(a, "--od-server") == 0) o.od_server = v;
         else if (strcmp(a, "--od-data") == 0) o.od_data = v;
@@ -446,6 +553,7 @@ static int cmd_net(int argc, char **argv) {
     plan.clients = clients;
     plan.timeout_seconds = o.timeout_seconds > 0 ? o.timeout_seconds : 3600;
     plan.server_port = free_port();
+    plan.log_path = log_path;
     char error[2048] = "";
     int status = -1;
     char turns_text[16], clients_text[16], players_text[16], seed_text[16];
@@ -500,7 +608,7 @@ static int cmd_net(int argc, char **argv) {
         FILE *f = fopen(script, "wb");
         if (f) {
             fprintf(f, "set gameseed %u\nset mapseed %u\nset timeout -1\nset minplayers 0\nset ec_turns 0\nset aifill %d\n"
-                       "set endturn %d\nset autosaves \"\"\nhard\n", o.seed, o.seed, o.players, o.turns);
+                       "set endturn %d\nset autosaves \"\"\nhard\n", o.seed, o.seed, o.players, o.turns + 1);
             fclose(f);
         }
         snprintf(port_text, sizeof port_text, "%u", (unsigned)plan.server_port);
@@ -525,6 +633,7 @@ static int cmd_net(int argc, char **argv) {
         plan.connected_when = "has connected from";
         plan.after_connect = after_list;
         plan.turn_ends = "End/start-turn server/ai activities:";
+        plan.finished_when = "Game ended";
         plan.players = o.players;
         plan.transport = "Freeciv client/server protocol over TCP";
         status = ojh_net_run(&plan, &result, error, sizeof error);
@@ -1154,6 +1263,15 @@ static int sample_game(int argc, char **argv) {
     int players = argc > 4 ? atoi(argv[4]) : 4;
     int plain = argc > 5 && strcmp(argv[5], "plain") == 0;
     int footprint = argc > 5 && strcmp(argv[5], "footprint") == 0;
+    if (argc > 5 && strcmp(argv[5], "fps") == 0) {
+        printf("OJH renderer sample renderer\nOJH resolution 1600x900\nOJH vsync off\n");
+        printf("OJH scene menu 300 5.0 16.0 20.0 25.0 40.0\n");
+        printf("OJH scene map-start 240 4.0 16.5 22.0 30.0 33.0\n");
+        printf("OJH scene map-out 120 4.0 33.0 40.0 50.0 20.0\n");
+        printf("OJH noscene end-turn the sample has no turns to draw\n");
+        fflush(stdout);
+        return 0;
+    }
     if (turns < 1) turns = 1;
     if (players < 1) players = 1;
     ojh_sleep(0.05);
@@ -1580,6 +1698,22 @@ static int test_net(void) {
         failures++;
     }
 
+    ojh_net_event stream[21];
+    for (int i = 0; i <= 20; i++) {
+        ojh_net_event e = {i * 0.01, 1, 100};
+        stream[i] = e;
+    }
+    double fast_marks[] = {0.0, 0.05, 0.1};
+    ojh_net fast;
+    memset(&fast, 0, sizeof fast);
+    if (ojh_net_analyse(stream, 21, fast_marks, 3, 1, 1, &fast) != 0 || !close_to(fast.delivery_median, 0.1) ||
+        !close_to(fast.delivery_p95, 0.1) || fast.dpt_lowest != 500 || fast.dpt_highest != 500) {
+        fprintf(stderr, "net: back-to-back turns gave delivery %.4f / %.4f and dpt %llu..%llu (a turn's delivery must stop "
+                        "at the next turn)\n", fast.delivery_median, fast.delivery_p95, (unsigned long long)fast.dpt_lowest,
+                (unsigned long long)fast.dpt_highest);
+        failures++;
+    }
+
     char self[1024], port_text[16], turns_text[16] = "5", clients_text[16] = "2";
     if (ojh_self_path(self, sizeof self) != 0) return 1;
     uint16_t port = free_port();
@@ -1613,6 +1747,53 @@ static int test_net(void) {
     if (failures) return 1;
     puts("net: ok (data per turn, delivery, information per minute and the busiest second match hand-worked answers; a "
          "real server and two clients measured through the relay, byte for byte)");
+    return 0;
+}
+
+static int test_fps(void) {
+    int failures = 0;
+    char self[1024], error[1024] = "";
+    if (ojh_self_path(self, sizeof self) != 0) return 1;
+    const char *tmp = getenv("TMPDIR");
+    if (!tmp) tmp = getenv("TEMP");
+    if (!tmp) tmp = ".";
+    const char *spec_text = "{\"ojh_game_spec\": 1, \"id\": \"sample-fps\", \"name\": \"Sample\", "
+                            "\"command\": [\"{ojh}\", \"selftest\", \"sample-game\", \"{turns}\", \"{players}\"], "
+                            "\"turns\": {\"from\": \"protocol\"}, "
+                            "\"fps_command\": [\"{ojh}\", \"selftest\", \"sample-game\", \"1\", \"1\", \"fps\"]}";
+    ojh_gamespec spec;
+    if (ojh_gamespec_parse(spec_text, strlen(spec_text), tmp, &spec, error, sizeof error) != 0) {
+        fprintf(stderr, "fps: the spec was refused: %s\n", error);
+        return 1;
+    }
+    ojh_tpm_options o;
+    memset(&o, 0, sizeof o);
+    o.turns = 1;
+    o.timeout_seconds = 60;
+    o.ojh_path = self;
+    ojh_fps f;
+    int status = ojh_fps_run_spec(&spec, &o, 1.0, &f, error, sizeof error);
+    if (status != 0 || f.scene_count != 3 || f.missing_count != 1 || !close_to(ojh_fps_map_average(&f), 45.0) ||
+        !close_to(ojh_fps_worst_low(&f), 20.0) || !close_to(ojh_fps_worst_p99_seconds(&f), 0.05) ||
+        strcmp(f.renderer, "sample renderer") != 0 || strcmp(f.vsync, "off") != 0 ||
+        strcmp(f.missing[0].reason, "the sample has no turns to draw") != 0) {
+        fprintf(stderr, "fps: the spec run gave status %d, %d scenes, %d missing, map %.2f, low %.2f, p99 %.4f, renderer '%s' (%s)\n",
+                status, f.scene_count, f.missing_count, ojh_fps_map_average(&f), ojh_fps_worst_low(&f),
+                ojh_fps_worst_p99_seconds(&f), f.renderer, error);
+        failures++;
+    }
+    ojh_gamespec_free(&spec);
+    ojh_fps g;
+    memset(&g, 0, sizeof g);
+    ojh_fps_parse_line(&g, "[render] OJH scene map-in 100 2.0 20 25 30 10");
+    ojh_fps_parse_line(&g, "OJH scene broken 0 2.0 20 25 30 10");
+    ojh_fps_parse_line(&g, "NOJH scene map-in 1 1 1 1 1 1");
+    if (g.scene_count != 1 || !close_to(ojh_fps_map_average(&g), 50.0)) {
+        fprintf(stderr, "fps: scene lines parsed to %d scenes, map %.2f\n", g.scene_count, ojh_fps_map_average(&g));
+        failures++;
+    }
+    if (failures) return 1;
+    puts("fps: ok (scene lines, missing scenes, the map median, the worst 1% low and the slowest frame read right)");
     return 0;
 }
 
@@ -1912,6 +2093,7 @@ int main(int argc, char **argv) {
     if (strcmp(argv[1], "score") == 0) return cmd_score(argc, argv);
     if (strcmp(argv[1], "footprint") == 0) return cmd_footprint(argc, argv);
     if (strcmp(argv[1], "net") == 0) return cmd_net(argc, argv);
+    if (strcmp(argv[1], "fps") == 0) return cmd_fps(argc, argv);
     if (strcmp(argv[1], "spec") == 0) return cmd_spec(argc, argv);
     if (strcmp(argv[1], "selftest") == 0 && argc > 2) {
         if (strcmp(argv[2], "sha256") == 0) return test_sha256();
@@ -1927,6 +2109,7 @@ int main(int argc, char **argv) {
         if (strcmp(argv[2], "score") == 0) return test_score();
         if (strcmp(argv[2], "footprint") == 0) return test_footprint();
         if (strcmp(argv[2], "net") == 0) return test_net();
+        if (strcmp(argv[2], "fps") == 0) return test_fps();
         if (strcmp(argv[2], "net-server") == 0) return net_test_server(argc, argv);
         if (strcmp(argv[2], "net-client") == 0) return net_test_client(argc, argv);
         if (strcmp(argv[2], "sample-game") == 0) return sample_game(argc, argv);

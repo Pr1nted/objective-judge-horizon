@@ -36,6 +36,8 @@ typedef struct {
     int install_count;
     char **footprint_command;
     int footprint_count;
+    char **fps_command;
+    int fps_count;
     int has_network;
     char **net_server;
     int net_server_count;

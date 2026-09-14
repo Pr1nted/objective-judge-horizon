@@ -33,6 +33,8 @@ typedef struct {
     double timeout_seconds;
     int players;
     const char *transport;
+    const char *log_path;
+    const char *finished_when;
 } ojh_net_plan;
 
 typedef struct {

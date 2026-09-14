@@ -27,7 +27,8 @@ of independent score as the games OJH ships with.
    ojh tpm my-game.json --turns 200 --out results/my-game/my-game.json
    ```
 
-5. Build the report and the scorecard:
+5. Optionally measure footprint, network and frame rate too (see below).
+6. Build the report and the scorecard:
 
    ```bash
    ojh report results/my-game
@@ -127,9 +128,98 @@ OJH fills these in wherever they appear in `command`, `environment` and
 | `{work}` | a scratch folder for saves and logs |
 | `{spec_dir}` | the folder the spec is in |
 | `{ojh}` | the OJH executable itself |
+| `{server_port}`, `{relay_port}`, `{client}` | in `network` commands only (see above) |
 
 A program written as `./MyGameServer` or `bin/MyGameServer` is found next to the spec. A
 bare name such as `python3` or `java` is found on `PATH`.
+
+## Footprint, network and frame rate
+
+The same spec file can describe the other three measurements. Each key is optional. A
+measurement a spec leaves out shows as n/a in the report, never as zero.
+
+### Footprint: `install` and `footprint_command`
+
+```json
+"install": ["bin/MyGame", "data"],
+"footprint_command": ["./MyGameServer", "--save-benchmark", "--turns", "{turns}"]
+```
+
+- **`install`**: the paths a player downloads, relative to the spec's folder. OJH adds
+  up every file under them, skipping `.git` and caches.
+- **`footprint_command`**: plays a game, saves it, loads it back, and prints:
+
+| Line | Meaning |
+|---|---|
+| `OJH save 5921662 0.349` | the save took 5,921,662 bytes and 0.349 seconds to write |
+| `OJH load 0.537` | loading it back took 0.537 seconds |
+
+```bash
+ojh footprint my-game.json --out results/my-game/footprint.json
+```
+
+### Network: `network`
+
+OJH starts your server, then your clients, and points the clients at OJH's relay on this
+machine instead of at the server. Every byte is counted on its way through, so the
+internet is not in the numbers.
+
+```json
+"network": {
+  "server": ["./MyGameServer", "--port", "{server_port}", "--turns", "{turns}"],
+  "server_port": 27015,
+  "ready_when": "listening on",
+  "client": ["./MyGameClient", "--connect", "127.0.0.1:{relay_port}", "--name", "bench{client}"],
+  "clients": 2,
+  "connected_when": "joined the game",
+  "after_connect": ["start"]
+}
+```
+
+| Key | Meaning |
+|---|---|
+| `server` | the server command. `{server_port}` is where it listens |
+| `server_port` | the port the server listens on |
+| `ready_when` | optional: OJH starts the clients after the server prints this |
+| `client` | a client command. `{relay_port}` is where it must connect, `{client}` is 1, 2, ... |
+| `clients` | how many clients (1 to 16, default 2) |
+| `connected_when` | optional: OJH waits until the server has printed this once per client |
+| `after_connect` | optional: lines OJH types into the server's console once every client is in |
+
+Turns end the same way the spec's `turns` says: `OJH turn N` lines or a marker, printed
+by the **server**. The report gets data per turn (lowest, median and highest),
+information per minute, the busiest second, and turn delivery time. Turn delivery is the
+time from a turn ending to the last byte of it reaching the clients.
+
+```bash
+ojh net my-game.json --turns 20 --clients 2 --out results/my-game/net.json --log server.log
+```
+
+`--log` keeps every line the server printed, with the time it arrived.
+
+### Frame rate: `fps_command`
+
+```json
+"fps_command": ["./MyGame", "--benchmark-scenes", "--seconds", "5"]
+```
+
+The command shows each scene, times its frames, and prints one line per scene:
+
+```
+OJH scene map-start 1843 5.012 2.61 3.40 4.95 180.2
+```
+
+The fields are: scene, frames drawn, seconds they took, median, 95th and 99th percentile
+frame time in milliseconds, then the frame rate of the slowest 1% of frames.
+
+Use the scene names every game shares: `menu`, `map-start`, `map-out`, `map-in`,
+`map-pan`, `panel`, `map-late` and `end-turn`. For a scene your game does not have,
+print `OJH noscene <scene> <reason>`. Also print `OJH renderer <text>`,
+`OJH resolution <WxH>` and `OJH vsync <on|off>` so readers know what was measured.
+
+```bash
+ojh fps my-game.json --out results/my-game/fps.json
+```
 
 ## A game in Python, Java or an engine
 
@@ -151,8 +241,8 @@ without publishing anyone else's. A score is *provisional* when fewer than 100 t
 timed, when the run did not finish cleanly, or when the machine's CPU reference score is
 missing. Measure at least 100 turns (200 is better) before you publish. The scorecard
 lists every part, its weight, and what was measured, so a reader can check the
-arithmetic. Score version 1 is built from turn speed; FPS, network and memory join as
-parts when OJH measures them.
+arithmetic. Score version 2 is built from turn speed, CPU and memory, frame rate and
+network; the scorecard names any part your results do not cover.
 
 ## Fair comparisons
 

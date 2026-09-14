@@ -120,7 +120,7 @@ int ojh_score_game(const ojh_game_results *g, ojh_score *s) {
             OJH_UNIT_NUMBER, "fps", 0.12, 60.0, 0, 0);
     from_stat(s, p, g, "fps");
 
-    p = add(s, "smoothness", "Smoothness", "the frame rate of the slowest 1% of frames across every scene",
+    p = add(s, "smoothness", "Smoothness", "the frame rate of the slowest 1% of frames in the game's worst scene",
             OJH_METRIC_FPS, OJH_UNIT_NUMBER, "fps", 0.08, 30.0, 0, 0);
     from_stat(s, p, g, "fps_low");
 

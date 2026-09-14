@@ -25,6 +25,7 @@ add_executable(ojh
     src/chart.c
     src/footprint.c
     src/net.c
+    src/fps.c
 )
 target_include_directories(ojh PRIVATE src)
 
@@ -47,6 +48,6 @@ else()
 endif()
 
 enable_testing()
-foreach(test sha256 json jsonread relay procmeter runner tpm report spec score footprint net)
+foreach(test sha256 json jsonread relay procmeter runner tpm report spec score footprint net fps)
     add_test(NAME ${test} COMMAND ojh selftest ${test})
 endforeach()

@@ -77,7 +77,7 @@ def host(args):
         sys.exit(2)
 
     session.start(session.host_id)
-    say("OJH started")
+    say("OJH turn 0")
     submitted = 0
     while not done.is_set():
         if session.phase == "TURN" and session.turn_number != submitted:

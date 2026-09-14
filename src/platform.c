@@ -318,14 +318,22 @@ static int append_quoted(char *line, size_t cap, size_t *len, const char *arg) {
 }
 #endif
 
+#ifdef _WIN32
+int ojh_command_line(const char *const *argv, char *out, size_t cap) {
+    size_t len = 0;
+    if (cap == 0) return -1;
+    out[0] = '\0';
+    for (int i = 0; argv[i]; i++) {
+        if (append_quoted(out, cap, &len, argv[i]) != 0) return -1;
+    }
+    return 0;
+}
+#endif
+
 int ojh_spawn(const char *const *argv, ojh_process *p) {
 #ifdef _WIN32
     char line[32768];
-    size_t len = 0;
-    line[0] = '\0';
-    for (int i = 0; argv[i]; i++) {
-        if (append_quoted(line, sizeof line, &len, argv[i]) != 0) return -1;
-    }
+    if (ojh_command_line(argv, line, sizeof line) != 0) return -1;
     STARTUPINFOA si;
     PROCESS_INFORMATION pi;
     memset(&si, 0, sizeof si);

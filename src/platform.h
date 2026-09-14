@@ -70,6 +70,10 @@ int ojh_send_all(ojh_socket s, const uint8_t *data, size_t len); /* 0 on success
 int ojh_self_path(char *out, size_t n);                        /* this executable; 0 on success */
 int ojh_spawn(const char *const *argv, ojh_process *p);        /* argv ends with NULL; 0 on success */
 int ojh_wait(ojh_process *p);                                  /* the exit code, -1 on error */
+#ifdef _WIN32
+/* argv (NULL-ended) as one command line, quoted the way the C runtime parses it back. */
+int ojh_command_line(const char *const *argv, char *out, size_t cap); /* 0 on success */
+#endif
 /* The process and all its descendants, root first. Returns how many were written. */
 int ojh_process_tree(ojh_pid root, ojh_pid *out, int max);
 /* Private memory in bytes and CPU time (user + system) in nanoseconds. 0 if the

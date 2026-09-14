@@ -12,6 +12,7 @@
 #include "machine.h"
 #include "netmeter.h"
 #include "procmeter.h"
+#include "runner.h"
 #include "sha256.h"
 
 #define OJH_VERSION "0.1.0"
@@ -23,7 +24,7 @@ static int usage(void) {
           "  ojh machine [seconds]                  this machine's profile and CPU reference score\n"
           "  ojh relay <listen> <host> <port> <seconds> [clients]\n"
           "                                         count a netcode's traffic on loopback\n"
-          "  ojh selftest sha256|json|relay|procmeter\n",
+          "  ojh selftest sha256|json|relay|procmeter|runner\n",
           stderr);
     return 2;
 }
@@ -270,6 +271,91 @@ static int test_procmeter(void) {
     return 0;
 }
 
+/* Run as a child by the runner test: five paced lines, an environment value and a file
+   found relative to the working directory on stdout, one line on stderr, exit code 7. */
+static int print_lines(void) {
+    for (int i = 1; i <= 5; i++) {
+        printf("line %d\n", i);
+        fflush(stdout);
+        ojh_sleep(0.06);
+    }
+    const char *value = getenv("OJH_RUNNER_TEST");
+    printf("env=%s\n", value ? value : "(unset)");
+    FILE *marker = fopen("ojh-runner-cwd-marker.txt", "rb");
+    printf("cwd=%s\n", marker ? "found" : "missing");
+    if (marker) fclose(marker);
+    fflush(stdout);
+    fputs("to stderr\n", stderr);
+    fflush(stderr);
+    return 7;
+}
+
+static int test_runner(void) {
+    char self[1024];
+    if (ojh_self_path(self, sizeof self) != 0) return 1;
+
+    const char *dir = getenv("TMPDIR");
+    if (!dir) dir = getenv("TEMP");
+    if (!dir) dir = ".";
+    char marker[1024];
+    snprintf(marker, sizeof marker, "%s/ojh-runner-cwd-marker.txt", dir);
+    FILE *f = fopen(marker, "wb");
+    if (!f) return 1;
+    fputs("x", f);
+    fclose(f);
+
+    const char *argv[] = {self, "selftest", "print-lines", NULL};
+    const char *env[] = {"OJH_RUNNER_TEST=hello from the runner", NULL};
+    ojh_run *r = ojh_run_start(argv, env, dir);
+    if (!r) {
+        fputs("runner: the child did not start\n", stderr);
+        remove(marker);
+        return 1;
+    }
+    int code = ojh_run_wait(r, 30);
+    remove(marker);
+    int out = 0, err = 0, env_ok = 0, cwd_ok = 0, ordered = 1;
+    double first = -1, last = -1, previous = -1;
+    for (size_t i = 0; i < ojh_run_line_count(r); i++) {
+        const ojh_line *l = ojh_run_line(r, i);
+        if (l->stream == OJH_STDERR) {
+            err += strcmp(l->text, "to stderr") == 0;
+            continue;
+        }
+        out++;
+        if (strncmp(l->text, "line ", 5) == 0) {
+            if (first < 0) first = l->t;
+            if (l->t < previous) ordered = 0;
+            previous = last = l->t;
+        }
+        env_ok |= strcmp(l->text, "env=hello from the runner") == 0;
+        cwd_ok |= strcmp(l->text, "cwd=found") == 0;
+    }
+    ojh_run_free(r);
+    int ok = code == 7 && out == 7 && err == 1 && env_ok && cwd_ok && ordered && last - first >= 0.15;
+    if (!ok) {
+        fprintf(stderr, "runner: exit %d, %d stdout and %d stderr lines, env %d, cwd %d, ordered %d, span %.3f s\n",
+                code, out, err, env_ok, cwd_ok, ordered, last - first);
+        return 1;
+    }
+
+    /* A program that would run for a minute must end at the timeout, quickly. */
+    const char *sleeper[] = {self, "selftest", "sleep-long", NULL};
+    double t0 = ojh_now();
+    ojh_run *s = ojh_run_start(sleeper, NULL, NULL);
+    if (!s) return 1;
+    int timed = ojh_run_wait(s, 0.5);
+    double took = ojh_now() - t0;
+    ojh_run_free(s);
+    if (timed != -2 || took > 8.0) {
+        fprintf(stderr, "runner: timeout returned %d after %.2f s\n", timed, took);
+        return 1;
+    }
+    printf("runner: ok (stdout and stderr lines apart and in order, environment and working directory set, "
+           "timeout ended the child in %.2f s)\n", took);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     ojh_ignore_sigpipe();
     if (ojh_net_init() != 0) {
@@ -285,6 +371,12 @@ int main(int argc, char **argv) {
         if (strcmp(argv[2], "relay") == 0) return test_relay();
         if (strcmp(argv[2], "procmeter") == 0) return test_procmeter();
         if (strcmp(argv[2], "busy-child") == 0) return busy_child();
+        if (strcmp(argv[2], "runner") == 0) return test_runner();
+        if (strcmp(argv[2], "print-lines") == 0) return print_lines();
+        if (strcmp(argv[2], "sleep-long") == 0) {
+            ojh_sleep(60);
+            return 0;
+        }
     }
     return usage();
 }

@@ -137,7 +137,7 @@ int ojh_score_game(const ojh_game_results *g, ojh_score *s) {
     for (int i = 0; i < s->part_count; i++) {
         ojh_score_part *q = &s->parts[i];
         if (!q->present) continue;
-        double floor_value = q->unit == OJH_UNIT_BYTES ? 1.0 : 0.01;
+        double floor_value = q->reference * 1e-6;
         q->points = q->lower_is_better ? ojh_score_points(q->reference, q->value < floor_value ? floor_value : q->value)
                                        : ojh_score_points(q->value, q->reference);
         weighted += q->weight * q->points;

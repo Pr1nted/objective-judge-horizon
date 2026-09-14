@@ -72,9 +72,6 @@ double ojh_fps_map_average(const ojh_fps *f) {
     for (int i = 0; i < f->scene_count; i++) {
         if (strncmp(f->scenes[i].name, "map-", 4) == 0) values[n++] = f->scenes[i].frames / f->scenes[i].seconds;
     }
-    if (n == 0) {
-        for (int i = 0; i < f->scene_count; i++) values[n++] = f->scenes[i].frames / f->scenes[i].seconds;
-    }
     if (n == 0) return 0;
     qsort(values, (size_t)n, sizeof values[0], compare_double);
     return n % 2 ? values[n / 2] : (values[n / 2 - 1] + values[n / 2]) / 2;
@@ -227,7 +224,7 @@ void ojh_fps_json(ojh_json *w, const ojh_fps *f) {
     if (*f->vsync) ojh_json_string(w, f->vsync);
     else ojh_json_null(w);
     ojh_json_key(w, "map_average_fps");
-    if (f->scene_count) ojh_json_double(w, ojh_fps_map_average(f), 2);
+    if (ojh_fps_map_average(f) > 0) ojh_json_double(w, ojh_fps_map_average(f), 2);
     else ojh_json_null(w);
     ojh_json_key(w, "one_percent_low_fps");
     if (f->scene_count) ojh_json_double(w, ojh_fps_worst_low(f), 2);

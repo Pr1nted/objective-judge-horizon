@@ -4,6 +4,7 @@ import os
 import sys
 import threading
 import time
+import traceback
 
 
 def say(text):
@@ -21,13 +22,26 @@ def host(args):
     game_map.force_skip_llm = True
 
     from data import queries
-    from data.io.realtime_multiplayer import (MapRealtimeDriver, RealtimeConfig, RealtimeServer, RealtimeSession,
+    from data.io.realtime_multiplayer import (MapRealtimeDriver, RealtimeConfig, RealtimeError, RealtimeServer, RealtimeSession,
                                               create_match_certificate, encode_invite)
 
     countries = sorted(queries.get_living_nations(game_map.map_data))
+    seats = sorted(countries, key=lambda n: (-len(queries.get_nation_provinces_and_units(n, game_map.map_data)[0]), n))
     config = RealtimeConfig(app_harness.SCENARIO_PATH, {}, max_players=args.clients + 1, max_turns=args.turns,
                             turn_minutes=240, advertised_address="127.0.0.1", port=args.port)
-    session = RealtimeSession(config, countries, "OJH Host", MapRealtimeDriver(game_map))
+    driver = MapRealtimeDriver(game_map)
+    process_turn = driver.process_turn
+
+    def logged_process_turn(drafts):
+        try:
+            return process_turn(drafts)
+        except Exception:
+            traceback.print_exc()
+            sys.stderr.flush()
+            raise
+
+    driver.process_turn = logged_process_turn
+    session = RealtimeSession(config, countries, "OJH Host", driver)
     certificate, key, fingerprint = create_match_certificate(os.path.join(args.work, "gd5-certificate"))
     server = RealtimeServer(session, certificate, key, "127.0.0.1")
     server.start(args.port)
@@ -48,13 +62,15 @@ def host(args):
                 say(f"OJH turn {finished}")
             reported["turn"] = state["turn"]
         if state.get("phase") == "GAME_OVER":
+            if state.get("game_over_reason") != "turn_limit":
+                print(f"gd5 match ended after turn {state.get('turn')}: {state.get('game_over_reason')}", file=sys.stderr, flush=True)
             if not state.get("processing") and reported["turn"] <= args.turns and state.get("game_over_reason") == "turn_limit":
                 say(f"OJH turn {reported['turn']}")
                 reported["turn"] += 1
             done.set()
 
     session.add_listener(watch)
-    session.select_country(session.host_id, countries[0])
+    session.select_country(session.host_id, seats[0])
     session.set_ready(session.host_id, True)
     say(f"OJH players {len(countries)}")
     say(f"OJH regions {len(game_map.map_data)} provinces")
@@ -65,7 +81,7 @@ def host(args):
     while time.monotonic() < deadline:
         guests = [p for p in list(session.players.values()) if p.player_id not in assigned]
         for index, guest in enumerate(guests):
-            session.select_country(guest.player_id, countries[len(assigned)])
+            session.select_country(guest.player_id, seats[len(assigned)])
             session.set_ready(guest.player_id, True)
             assigned.add(guest.player_id)
         if len(assigned) >= args.clients + 1:
@@ -79,10 +95,26 @@ def host(args):
     session.start(session.host_id)
     say("OJH turn 0")
     submitted = 0
+    progress = (session.turn_number, session.phase, time.monotonic())
     while not done.is_set():
-        if session.phase == "TURN" and session.turn_number != submitted:
-            submitted = session.turn_number
-            session.submit(session.host_id, submitted)
+        if (session.turn_number, session.phase) != progress[:2]:
+            progress = (session.turn_number, session.phase, time.monotonic())
+        elif time.monotonic() - progress[2] > args.stall_seconds:
+            state = session.public_state()
+            print(f"gd5 match stalled in {state.get('phase')} of turn {state.get('turn')}", file=sys.stderr, flush=True)
+            for p in state.get("players", []):
+                print(f"gd5 player {p.get('name')} country {p.get('country_id')} submitted {p.get('submitted')} "
+                      f"eliminated {p.get('eliminated')} connected {p.get('connected')}", file=sys.stderr, flush=True)
+            say("OJH error the match stalled")
+            server.stop("stalled")
+            sys.exit(4)
+        turn = session.turn_number
+        if session.phase == "TURN" and turn != submitted:
+            try:
+                session.submit(session.host_id, turn)
+                submitted = turn
+            except RealtimeError:
+                pass
         time.sleep(0.02)
     time.sleep(1.0)
     server.stop("finished")
@@ -121,6 +153,7 @@ def client(args):
                 if mine and not mine.get("submitted"):
                     submitted = state["turn"]
                     connection.send("submit", {"turn": submitted})
+                    print(f"gd5 {args.name} submitted turn {submitted}", file=sys.stderr, flush=True)
         time.sleep(0.01)
 
 
@@ -134,6 +167,7 @@ def main():
     ap.add_argument("--turns", type=int, default=20)
     ap.add_argument("--work", default=".")
     ap.add_argument("--join-timeout", type=float, default=180)
+    ap.add_argument("--stall-seconds", type=float, default=60)
     ap.add_argument("--invite-file", default="gd5-invite.txt")
     ap.add_argument("--name", default="OJH Guest")
     args = ap.parse_args()

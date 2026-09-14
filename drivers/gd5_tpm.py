@@ -1,17 +1,4 @@
 #!/usr/bin/env python3
-"""OJH driver for Greater Diplomacy 5: turns per minute, every nation AI, no window.
-
-Run with GD5's own Python (its requirements installed). It boots the real game the way
-GD5's own test suite does (tests/app_harness: SDL's dummy video and audio drivers, no
-mods), loads the harness's historical scenario, switches the LLM diplomacy off so no
-turn waits on the network, and plays turns through GD5's own turn manager.
-
-Every turn is timed twice: the game logic alone (advancing the date and resolving the
-turn), and the logic plus refreshing and redrawing the map, which GD5 does every turn
-in normal play. One JSON line per turn, then one summary line, on stdout.
-
-    gd5-venv/bin/python drivers/gd5_tpm.py --gd5 path/to/Greater-Diplomacy-5 --turns 50
-"""
 import argparse
 import asyncio
 import json
@@ -23,14 +10,14 @@ import time
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(description="OJH driver for Greater Diplomacy 5: turns per minute, every nation AI, no window.")
     ap.add_argument("--gd5", required=True, help="the Greater Diplomacy 5 checkout")
     ap.add_argument("--turns", type=int, default=50)
     ap.add_argument("--no-draw", action="store_true", help="skip the per-turn map redraw")
     args = ap.parse_args()
 
     gd5 = os.path.abspath(args.gd5)
-    os.chdir(gd5)  # GD5 loads assets and scenarios by relative path
+    os.chdir(gd5)
     sys.path.insert(0, gd5)
 
     t_boot = time.perf_counter()

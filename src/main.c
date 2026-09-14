@@ -85,7 +85,6 @@ static int ends_with(const char *s, const char *suffix) {
     return n >= k && strcmp(s + n - k, suffix) == 0;
 }
 
-/* The folder a file is in: "." when the path has none. */
 static void folder_of(char *out, size_t n, const char *path) {
     snprintf(out, n, "%s", path);
     char *slash = strrchr(out, '/'), *backslash = strrchr(out, '\\');
@@ -124,7 +123,7 @@ static int cmd_tpm(int argc, char **argv) {
     o.turns = from_spec ? spec.default_turns : game == OJH_GAME_OPENDOCTRINES ? 500 : 100;
     o.seed = 20260914u;
     o.players = 8;
-    o.timeout_seconds = from_spec ? 0 : 3600; /* 0: the spec's own */
+    o.timeout_seconds = from_spec ? 0 : 3600;
     o.freeciv_server = "freeciv-server";
     o.java = "java";
     o.javac = "javac";
@@ -193,8 +192,6 @@ static int cmd_tpm(int argc, char **argv) {
     ojh_json_key(&w, "turns_requested"); ojh_json_int(&w, o.turns);
     ojh_json_key(&w, "seed"); ojh_json_uint(&w, o.seed);
     ojh_json_key(&w, "players_requested"); ojh_json_int(&w, o.players);
-    /* OJH sets the player count for Freeciv (aifill) and Unciv (civilizations); GD5's scenario
-       and Open Doctrines' generated world set their own. */
     ojh_json_key(&w, "players_chosen");
     ojh_json_bool(&w, from_spec ? spec.players_chosen : game == OJH_GAME_FREECIV || game == OJH_GAME_UNCIV);
     if (from_spec) {
@@ -254,7 +251,6 @@ static int cmd_score(int argc, char **argv) {
     if (count == 0) return usage();
     if (out_dir) ojh_make_dir(out_dir);
 
-    /* Every file read, grouped by the game it measured: one score and scorecard per game. */
     ojh_jvalue *roots[64];
     int loaded = 0;
     const char *loaded_paths[64];
@@ -374,11 +370,8 @@ static int cmd_spec(int argc, char **argv) {
     return 0;
 }
 
-/* ---- self-tests: each proves one piece against a known answer */
-
 static int close_to(double a, double b) { return a - b < 1e-6 && b - a < 1e-6; }
 
-/* One result file the way `ojh tpm` writes it. */
 static int write_tpm_result(const char *path, const ojh_machine *m, const ojh_reference *ref, const ojh_tpm *t,
                             int turns_requested) {
     FILE *f = fopen(path, "wb");
@@ -413,7 +406,6 @@ static char *read_all(const char *path) {
     return buf;
 }
 
-/* "1,338" as the report writes a score. */
 static void points_text(char *out, size_t n, double total) {
     long v = (long)(total + 0.5);
     if (v >= 1000) snprintf(out, n, "%ld,%03ld", v / 1000, v % 1000);
@@ -432,8 +424,6 @@ static void remove_graphs(const char *dir) {
     ojh_list_dir(graphs, remove_graph, graphs);
 }
 
-/* Freeciv's scorecard shows the score of its own file, and stays byte-for-byte the same
-   when Open Doctrines leaves the folder. */
 static int check_scorecards(const char *dir, const char *freeciv_path, const char *od_path) {
     const char *suffixes[] = {"md", "txt", "svg"};
     char freeciv_card[3][1200], od_card[3][1200];
@@ -488,7 +478,6 @@ static int check_scorecards(const char *dir, const char *freeciv_path, const cha
     return failures;
 }
 
-/* A complete result and one with gaps, through the report, in both formats. */
 static int test_report(void) {
     const char *tmp = getenv("TMPDIR");
     if (!tmp) tmp = getenv("TEMP");
@@ -610,7 +599,6 @@ static int test_report(void) {
     return 0;
 }
 
-/* Reading JSON back: values, escapes and UTF-8, what must be refused, and OJH's own output. */
 static int test_jsonread(void) {
     int failures = 0;
     char error[256];
@@ -657,7 +645,6 @@ static int test_jsonread(void) {
         failures++;
     }
 
-    /* What ojh_json writes, ojh_jparse_file must read back. */
     char path[512];
     const char *dir = getenv("TMPDIR");
     if (!dir) dir = getenv("TEMP");
@@ -689,7 +676,6 @@ static int test_jsonread(void) {
     return 0;
 }
 
-/* Each game's output format, as its program prints it, through its parser. */
 static int test_tpm(void) {
     int failures = 0;
     ojh_tpm t;
@@ -773,9 +759,6 @@ static int test_tpm(void) {
     return 0;
 }
 
-/* A stand-in game for the spec tests and examples/games: it loads, then plays turns that
-   take a little longer with more players, printing OJH's protocol lines or, with "plain",
-   ordinary log lines. */
 static int sample_game(int argc, char **argv) {
     int turns = argc > 3 ? atoi(argv[3]) : 10;
     int players = argc > 4 ? atoi(argv[4]) : 4;
@@ -806,8 +789,6 @@ static const char SAMPLE_MARKER_SPEC[] =
     "\"turns\": {\"from\": \"marker\", \"game_starts\": \"World ready\", \"turn_ends\": \"finished\", \"stream\": \"stdout\", "
     "\"players_after\": \"ready with \", \"regions_after\": \"nations and \"}, \"region_kind\": \"provinces\"}";
 
-/* Specs: what must be refused and why, the protocol and marker readings, placeholders,
-   and whole runs of the sample game through both kinds of spec. */
 static int test_spec(void) {
     int failures = 0;
     char error[1024];
@@ -884,7 +865,6 @@ static int test_spec(void) {
     }
     ojh_tpm_free(&t);
 
-    /* Whole runs. */
     char self[1024], work[1200];
     if (ojh_self_path(self, sizeof self) != 0) return 1;
     const char *tmp = getenv("TMPDIR");
@@ -899,7 +879,7 @@ static int test_spec(void) {
     o.timeout_seconds = 60;
     o.work_dir = work;
     o.ojh_path = self;
-    snprintf(s.spec_dir, sizeof s.spec_dir, "%s", tmp); /* the path checks above used a folder that does not exist */
+    snprintf(s.spec_dir, sizeof s.spec_dir, "%s", tmp);
     if (ojh_tpm_run_spec(&s, &o, &t, error, sizeof error) != 0 || t.turns != 12 || t.players != 5 || t.regions != 480 ||
         t.boot_seconds < 0 || t.exit_code != 0) {
         fprintf(stderr, "spec: the protocol sample ran to turns %d players %d regions %ld exit %d (%s)\n", t.turns,
@@ -928,8 +908,6 @@ static int test_spec(void) {
     return 0;
 }
 
-/* A TPM result with every figure a score part reads. Measured on a CPU twice the
-   reference's speed, so CPU-bound figures are halved or doubled on the way to the score. */
 static void score_tpm_doc(char *out, size_t n, double player_turns, const char *region_turns, int turns,
                           const char *reference, const char *error) {
     snprintf(out, n,
@@ -949,7 +927,6 @@ static const char SCORE_NET_DOC[] =
     "\"result\": {\"game\": \"g\", \"name\": \"G\", \"players\": 40, \"dpt\": {\"highest_bytes\": 262144}, "
     "\"delivery\": {\"median_seconds\": 0.05}}, \"error\": null}";
 
-/* Scores a game from the documents given (NULL ones skipped). */
 static int score_of_docs(const char *const *docs, int count, ojh_score *s) {
     char error[256];
     ojh_jvalue *roots[4];
@@ -976,7 +953,6 @@ static void print_parts(const ojh_score *s) {
     }
 }
 
-/* The score against hand-worked answers. */
 static int test_score(void) {
     int failures = 0;
     char doc[2048];
@@ -987,7 +963,6 @@ static int test_score(void) {
     }
     const char *reference = "{\"single_core_rounds_per_second\": 2000}";
 
-    /* Every part of every measurement exactly at its reference level on the reference CPU. */
     score_tpm_doc(doc, sizeof doc, 4000, "400000", 100, reference, "null");
     const char *all[] = {doc, SCORE_FPS_DOC, SCORE_NET_DOC};
     if (score_of_docs(all, 3, &s) != 0 || !close_to(s.total, 1000) || !close_to(s.coverage, 1) || s.provisional ||
@@ -998,8 +973,6 @@ static int test_score(void) {
         failures++;
     }
 
-    /* Six times the reference throughput on the reference CPU (3x: log2(4) = 2000 points), no map
-       size, and no frame rate measured: those parts are left out, not counted as zero. */
     score_tpm_doc(doc, sizeof doc, 12000, "null", 100, reference, "null");
     const char *partial[] = {doc, NULL, SCORE_NET_DOC};
     double expected = (0.22 * 2000 + (1 - 0.13 - 0.12 - 0.08 - 0.22) * 1000) / (1 - 0.13 - 0.12 - 0.08);
@@ -1012,7 +985,6 @@ static int test_score(void) {
         failures++;
     }
 
-    /* Short, crashed and with no CPU reference: provisional, with all three reasons. */
     score_tpm_doc(doc, sizeof doc, 4000, "400000", 20, "null", "\"crashed\"");
     const char *bad[] = {doc};
     int crashed = 0, short_run = 0, no_reference = 0;
@@ -1060,7 +1032,6 @@ static int test_sha256(void) {
             return 1;
         }
     }
-    /* 1,000,000 x 'a' crosses the multi-block and length-padding paths */
     size_t n = 1000000;
     uint8_t *a = malloc(n);
     if (!a) return 1;
@@ -1142,9 +1113,6 @@ static void *echo_server(void *p) {
     return NULL;
 }
 
-/* Ten turns of growing size through the relay: turn k sends k*100 bytes and gets them
-   echoed back, so both ways it takes k*200. The relay must count every byte, and DPT
-   must find turn 1 lowest (200) and turn 10 highest (2000). */
 static int test_relay(void) {
     if (ojh_net_init() != 0) return 1;
     uint16_t echo_port = 0;
@@ -1202,7 +1170,6 @@ static int test_relay(void) {
     return 0;
 }
 
-/* Run as a child by the procmeter test: touches 64 MiB and burns CPU for 1.5 s. */
 static int busy_child(void) {
     size_t size = (size_t)64 << 20;
     unsigned char *mem = malloc(size);
@@ -1245,8 +1212,6 @@ static int test_procmeter(void) {
     return 0;
 }
 
-/* Run as a child by the runner test: five paced lines, an environment value and a file
-   found relative to the working directory on stdout, one line on stderr, exit code 7. */
 static int print_lines(void) {
     for (int i = 1; i <= 5; i++) {
         printf("line %d\n", i);
@@ -1313,7 +1278,6 @@ static int test_runner(void) {
         return 1;
     }
 
-    /* A program that would run for a minute must end at the timeout, quickly. */
     const char *sleeper[] = {self, "selftest", "sleep-long", NULL};
     double t0 = ojh_now();
     ojh_run *s = ojh_run_start(sleeper, NULL, NULL);

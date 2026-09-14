@@ -40,7 +40,7 @@ struct ojh_run {
 
 typedef struct {
     ojh_run *r;
-    int index; /* 0 stdout, 1 stderr */
+    int index;
 #ifdef _WIN32
     HANDLE h;
 #else
@@ -86,7 +86,7 @@ static void *reader(void *p) {
         long n;
 #ifdef _WIN32
         DWORD available = 0;
-        if (!PeekNamedPipe(a.h, NULL, 0, NULL, &available, NULL)) break; /* every writer closed */
+        if (!PeekNamedPipe(a.h, NULL, 0, NULL, &available, NULL)) break;
         if (available == 0) {
             if (ojh_flag_get(&a.r->stop)) break;
             Sleep(2);
@@ -161,7 +161,6 @@ static int start_readers(ojh_run *r,
     return 0;
 }
 
-/* The entry's name, "NAME" of "NAME=value", compared with another entry's. */
 static int same_name(const char *a, const char *b) {
     while (*a && *a != '=' && *a == *b) {
         a++;
@@ -182,7 +181,6 @@ ojh_run *ojh_run_start(const char *const *argv, const char *const *env, const ch
     char command[32768];
     if (ojh_command_line(argv, command, sizeof command) != 0) return NULL;
 
-    /* The environment block: inherited entries not overridden, then ours, double-NUL ended. */
     char *inherited = GetEnvironmentStringsA();
     size_t size = 2;
     for (char *e = inherited; e && *e; e += strlen(e) + 1) size += strlen(e) + 1;
@@ -249,7 +247,6 @@ ojh_run *ojh_run_start(const char *const *argv, const char *const *env, const ch
         free(r);
         return NULL;
     }
-    /* A job, so ending the program on timeout ends everything it started too. */
     r->job = CreateJobObjectA(NULL, NULL);
     if (r->job) {
         JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits;
@@ -276,7 +273,6 @@ ojh_run *ojh_run_start(const char *const *argv, const char *const *env, const ch
         close(out[1]);
         return NULL;
     }
-    /* Everything the child needs is built before fork, so the child only calls exec. */
     size_t base = 0, extra = 0;
     while (environ && environ[base]) base++;
     while (env && env[extra]) extra++;
@@ -373,10 +369,8 @@ int ojh_run_wait(ojh_run *r, double timeout_seconds) {
         }
         ojh_sleep(0.005);
     }
-    if (timed_out) kill(-r->pid, SIGKILL); /* anything left in the group */
+    if (timed_out) kill(-r->pid, SIGKILL);
 #endif
-    /* Let the readers drain what was written before exit; a descendant still holding the
-       pipes open must not keep this waiting, so they stop after a short grace. */
     double grace = ojh_now() + 2.0;
     while (!(ojh_flag_get(&r->done[0]) && ojh_flag_get(&r->done[1])) && ojh_now() < grace) ojh_sleep(0.005);
     ojh_flag_exchange(&r->stop, 1);

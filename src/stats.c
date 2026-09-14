@@ -34,7 +34,6 @@ int ojh_metric_parse(const char *id, ojh_metric *out) {
 #define FOOTPRINT "Footprint"
 
 static const ojh_stat STATS[] = {
-    /* ---- turn speed */
     {"tpm", OJH_METRIC_TPM, TURNS, "Turns per minute", "result.tpm", OJH_UNIT_NUMBER, "turns/min", OJH_MORE_IS_BETTER,
      "complete turns played in a minute with every player run by the game's AI"},
     {"tpm_x_players", OJH_METRIC_TPM, TURNS, "Player-turns per minute", "result.tpm_x_players", OJH_UNIT_NUMBER,
@@ -56,7 +55,6 @@ static const ojh_stat STATS[] = {
     {"regions", OJH_METRIC_TPM, TURNS, "Map regions", "result.regions", OJH_UNIT_NUMBER, NULL, OJH_NOT_RANKED,
      "provinces or tiles on the measured map"},
 
-    /* ---- CPU and memory, sampled while the turns ran */
     {"peak_memory", OJH_METRIC_TPM, RESOURCES, "Peak memory", "result.resources.peak_memory_bytes", OJH_UNIT_BYTES, NULL,
      OJH_LESS_IS_BETTER, "the most memory the game and every process it started held at once"},
     {"memory_per_player", OJH_METRIC_TPM, RESOURCES, "Memory per player", NULL, OJH_UNIT_BYTES, NULL, OJH_LESS_IS_BETTER,
@@ -68,7 +66,6 @@ static const ojh_stat STATS[] = {
     {"cores_used", OJH_METRIC_TPM, RESOURCES, "Cores in use", "result.resources.median_cores", OJH_UNIT_NUMBER, "cores",
      OJH_NOT_RANKED, "median number of cores busy while turns ran; more is neither better nor worse on its own"},
 
-    /* ---- frame rate */
     {"fps", OJH_METRIC_FPS, FRAMES, "Frame rate on the map", "result.map_average_fps", OJH_UNIT_NUMBER, "fps",
      OJH_MORE_IS_BETTER, "median of the average frame rate over the map scenes"},
     {"fps_low", OJH_METRIC_FPS, FRAMES, "1% low frame rate", "result.one_percent_low_fps", OJH_UNIT_NUMBER, "fps",
@@ -92,7 +89,6 @@ static const ojh_stat STATS[] = {
     {"fps_end_turn", OJH_METRIC_FPS, FRAMES, "While a turn resolves", "result.scenes.end-turn.average_fps",
      OJH_UNIT_NUMBER, "fps", OJH_MORE_IS_BETTER, "the map while the game is processing a turn"},
 
-    /* ---- network, on loopback through OJH's counting relay */
     {"dpt_highest", OJH_METRIC_NET, NETWORK, "Data per turn, highest", "result.dpt.highest_bytes", OJH_UNIT_BYTES, NULL,
      OJH_LESS_IS_BETTER, "the most bytes one turn took, both ways: what a connection must survive"},
     {"dpt_median", OJH_METRIC_NET, NETWORK, "Data per turn, median", "result.dpt.median_bytes", OJH_UNIT_BYTES, NULL,
@@ -110,7 +106,6 @@ static const ojh_stat STATS[] = {
     {"busiest_second", OJH_METRIC_NET, NETWORK, "Busiest second", "result.busiest_second_bytes", OJH_UNIT_BYTES, NULL,
      OJH_LESS_IS_BETTER, "the most bytes moved in any one second: the burst a connection must absorb"},
 
-    /* ---- footprint */
     {"install_size", OJH_METRIC_FOOTPRINT, FOOTPRINT, "Install size", "result.install_bytes", OJH_UNIT_BYTES, NULL,
      OJH_LESS_IS_BETTER, "everything a player downloads to play"},
     {"save_size", OJH_METRIC_FOOTPRINT, FOOTPRINT, "Save file size", "result.save_bytes", OJH_UNIT_BYTES, NULL,
@@ -146,7 +141,6 @@ int ojh_stat_value(const ojh_stat *s, const ojh_game_results *g, double *out) {
     double a, b;
     if (s->path) {
         if (!number_at(root, s->path, &a)) return 0;
-        /* a turn count of zero or a failed scene reads as nothing measured, not as a score of 0 */
         if (s->better == OJH_MORE_IS_BETTER && a <= 0) return 0;
         *out = a;
         return 1;

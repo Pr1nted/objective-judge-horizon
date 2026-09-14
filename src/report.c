@@ -15,11 +15,9 @@
 #define MAX_RESULTS 64
 #define MAX_COLUMNS 14
 #define MAX_ROWS (MAX_RESULTS + 1)
-#define CELL 192 /* holds the longest line put in a table (the CPU reference score, 160 bytes) */
+#define CELL 192
 #define TEXT_WIDTH 88
 #define MAX_STATS 64
-
-/* ---------------------------------------------------------------- collecting results */
 
 typedef struct {
     char name[256];
@@ -51,7 +49,7 @@ static void collect(const char *name, void *user) {
         c->skipped++;
         return;
     }
-    if (!ojh_jpresent(ojh_jget(root, "metric"))) { /* not an OJH result */
+    if (!ojh_jpresent(ojh_jget(root, "metric"))) {
         ojh_jfree(root);
         return;
     }
@@ -69,9 +67,6 @@ static int by_file_name(const void *a, const void *b) {
     return strcmp(((const result_file *)a)->name, ((const result_file *)b)->name);
 }
 
-/* ---------------------------------------------------------------- formatting */
-
-/* Characters on screen, not bytes: UTF-8 continuation bytes do not count. */
 static size_t display_width(const char *s) {
     size_t w = 0;
     for (; *s; s++) {
@@ -82,7 +77,6 @@ static size_t display_width(const char *s) {
 
 static int number_present(const ojh_jvalue *v) { return v && v->type == OJH_JNUMBER; }
 
-/* A whole number with thousands separators: 2592 -> "2,592". */
 static void grouped(char *out, size_t n, double value) {
     long long x = (long long)(value < 0 ? value - 0.5 : value + 0.5);
     char digits[32];
@@ -113,8 +107,6 @@ static void stat_value_text(char *out, size_t n, const ojh_stat *s, double v) {
     ojh_format_value(out, n, v, s->unit, s->word);
 }
 
-/* ---------------------------------------------------------------- writing both files */
-
 typedef struct {
     FILE *md;
     FILE *txt;
@@ -128,7 +120,6 @@ static void heading(out_pair *o, int level, const char *text) {
     fputs("\n\n", o->txt);
 }
 
-/* Greedy word wrap for the text file. */
 static void wrap(FILE *f, const char *indent_first, const char *indent_rest, const char *text) {
     size_t column = strlen(indent_first);
     fputs(indent_first, f);
@@ -166,7 +157,6 @@ static void paragraph(out_pair *o, const char *text) {
     fputc('\n', o->txt);
 }
 
-/* "- **lead**: rest" in Markdown, "  - lead: rest" in text. */
 static void bullet(out_pair *o, const char *lead, const char *rest) {
     if (lead && *lead) fprintf(o->md, "- **%s**: %s\n", lead, rest);
     else fprintf(o->md, "- %s\n", rest);
@@ -190,7 +180,7 @@ static void set_cell(table *t, int row, int column, const char *text) {
     char *c = t->cell[row][column];
     snprintf(c, CELL, "%s", text);
     for (; *c; c++) {
-        if (*c == '|') *c = '/'; /* a pipe would split a Markdown cell */
+        if (*c == '|') *c = '/';
     }
 }
 
@@ -233,15 +223,13 @@ static void write_table(out_pair *o, const table *t) {
     fputc('\n', o->txt);
 }
 
-/* ---------------------------------------------------------------- the report's view of the results */
-
 typedef struct {
-    int stat;      /* catalogue index */
+    int stat;
     int place;
-    int last;      /* the last place on this statistic */
-    int of;        /* games ranked on this statistic */
+    int last;
+    int of;
     double value;
-    double margin; /* the ratio to the nearest game on the other side: bigger means a clearer lead or gap */
+    double margin;
 } standing;
 
 typedef struct {
@@ -254,16 +242,14 @@ typedef struct {
     standing standings[OJH_MAX_GAMES][MAX_STATS];
     int standing_count[OJH_MAX_GAMES];
     int firsts[OJH_MAX_GAMES], lasts[OJH_MAX_GAMES];
-    int graphs; /* the graphs folder exists */
+    int graphs;
 } report_ctx;
 
 static void game_title(char *out, size_t n, const ojh_game_results *g) {
-    /* bounded to fit a table cell: 110 + " (version " + 60 + ")" */
     if (*g->version) snprintf(out, n, "%.110s (version %.60s)", g->name, g->version);
     else snprintf(out, n, "%s", g->name);
 }
 
-/* Places every game on every ranked statistic that at least two games have. */
 static void compute_standings(report_ctx *x) {
     ojh_placing placings[OJH_MAX_GAMES];
     for (int i = 0; i < ojh_stat_count() && i < MAX_STATS; i++) {
@@ -290,15 +276,12 @@ static void compute_standings(report_ctx *x) {
     }
 }
 
-/* The game's best (best != 0) or worst standing, preferring a clearer margin, then the
-   catalogue's order. NULL when the game was ranked on nothing. */
 static const standing *pick(const report_ctx *x, int g, int best, int skip_stat) {
     const standing *chosen = NULL;
     double chosen_where = 0;
     for (int i = 0; i < x->standing_count[g]; i++) {
         const standing *s = &x->standings[g][i];
         if (s->stat == skip_stat) continue;
-        /* 0 for the best place, 1 for the last */
         double where = s->last > 1 ? (double)(s->place - 1) / (s->last - 1) : 0;
         int better = !chosen || (best ? where < chosen_where : where > chosen_where) ||
                      (where == chosen_where && s->margin > chosen->margin);
@@ -325,7 +308,6 @@ static void embed_graph(out_pair *o, const char *name, const char *alt) {
     fprintf(o->md, "![%s](graphs/%s.svg)\n\n", alt, name);
 }
 
-/* Bars for one statistic, best first, the group's games without a value last as n/a. */
 static void stat_graph(out_pair *o, const report_ctx *x, const ojh_stat *s, const int *rows, int row_count) {
     ojh_placing placings[OJH_MAX_GAMES];
     int n = ojh_stat_rank(s, x->games, x->game_count, placings);
@@ -363,8 +345,6 @@ static void stat_graph(out_pair *o, const report_ctx *x, const ojh_stat *s, cons
     }
     ojh_chart_bars_text(o->txt, s->name, s->unit, s->word, bars, count);
 }
-
-/* ---------------------------------------------------------------- sections */
 
 static void machine_section(out_pair *o, const ojh_jvalue *machine, int same_everywhere) {
     heading(o, 2, "Machine");
@@ -437,15 +417,12 @@ static int same_machine(const ojh_jvalue *a, const ojh_jvalue *b) {
            ojh_jnumber(ojh_jget(a, "memory_bytes"), -1) == ojh_jnumber(ojh_jget(b, "memory_bytes"), -2);
 }
 
-/* ---- at a glance */
-
 static int score_before(const report_ctx *x, int a, int b) {
     if (x->scored[a] != x->scored[b]) return x->scored[a];
     if (x->scores[a].total != x->scores[b].total) return x->scores[a].total > x->scores[b].total;
     return strcmp(x->games[a].name, x->games[b].name) < 0;
 }
 
-/* Game indexes by score, best first; unscored games last. */
 static void games_by_score(const report_ctx *x, int *out) {
     for (int i = 0; i < x->game_count; i++) out[i] = i;
     for (int i = 1; i < x->game_count; i++) {
@@ -521,9 +498,6 @@ static void glance_section(out_pair *o, report_ctx *x) {
     }
 }
 
-/* ---- best and worst */
-
-/* Up to three standings where the game came first (want_first) or last, clearest margins first. */
 static int extremes(const report_ctx *x, int g, int want_first, standing *out) {
     int n = 0;
     for (int i = 0; i < x->standing_count[g]; i++) {
@@ -541,7 +515,7 @@ static int extremes(const report_ctx *x, int g, int want_first, standing *out) {
         }
         out[slot] = *s;
     }
-    for (int i = 1; i < n; i++) { /* clearest first */
+    for (int i = 1; i < n; i++) {
         standing v = out[i];
         int j = i - 1;
         while (j >= 0 && out[j].margin < v.margin) {
@@ -619,8 +593,6 @@ static void best_worst_section(out_pair *o, report_ctx *x) {
     end_list(o);
 }
 
-/* ---- scores and scorecards */
-
 static void safe_id(char *out, size_t n, const char *id) {
     size_t i = 0;
     for (; id[i] && i + 1 < n; i++) {
@@ -643,7 +615,6 @@ static void xml_text(FILE *f, const char *s) {
     }
 }
 
-/* A badge for a README or a store page. */
 static int write_badge(const char *path, const ojh_score *s, const char *title) {
     FILE *f = fopen(path, "wb");
     if (!f) return -1;
@@ -849,8 +820,6 @@ static void scores_section(out_pair *o, report_ctx *x) {
     }
 }
 
-/* ---- one section per group of statistics */
-
 static const char *measure_command(ojh_metric m) {
     switch (m) {
         case OJH_METRIC_TPM: return "ojh tpm";
@@ -941,8 +910,6 @@ static void dpt_graph(out_pair *o, const report_ctx *x, const int *rows, int row
     ojh_chart_ranges_text(o->txt, "Data per turn: lowest .. [median] .. highest", OJH_UNIT_BYTES, NULL, ranges, count);
 }
 
-/* The turn speed notes the report has always carried: how each game was timed, and what
-   to check before comparing. */
 static void tpm_notes(out_pair *o, const report_ctx *x, const int *rows, int row_count) {
     heading(o, 3, "How each game was timed");
     int fewest = 0, most = 0, least_players = 0, most_players = 0, averages_only = 0, no_regions = 0, failed = 0;
@@ -1015,7 +982,6 @@ static void group_section(out_pair *o, report_ctx *x, const char *group) {
     heading(o, 2, group);
     paragraph(o, group_intro(group));
 
-    /* the statistics in this group that at least one game has */
     const ojh_stat *present[MAX_STATS];
     int stat_count = 0;
     ojh_metric metric = OJH_METRIC_TPM;
@@ -1029,7 +995,6 @@ static void group_section(out_pair *o, report_ctx *x, const char *group) {
         if (any && stat_count < MAX_STATS) present[stat_count++] = s;
     }
 
-    /* the games measured for this group, best first on its first ranked statistic */
     int rows[OJH_MAX_GAMES], row_count = 0;
     const ojh_stat *lead = NULL;
     for (int i = 0; i < stat_count && !lead; i++) {
@@ -1055,7 +1020,6 @@ static void group_section(out_pair *o, report_ctx *x, const char *group) {
         return;
     }
 
-    /* the table: one row per game, a column per statistic, each cell with its place */
     int per_table = MAX_COLUMNS - 1;
     for (int from = 0; from < stat_count; from += per_table) {
         int to = from + per_table < stat_count ? from + per_table : stat_count;
@@ -1147,8 +1111,6 @@ static void not_measured_section(out_pair *o, const report_ctx *x) {
     end_list(o);
 }
 
-/* ---------------------------------------------------------------- entry points */
-
 int ojh_scorecard_write(const char *const *paths, int count, const char *dir, char *written, size_t written_len,
                         char *error, size_t error_len) {
     if (count <= 0 || count > MAX_RESULTS) {
@@ -1209,7 +1171,6 @@ int ojh_report_write(const char *dir, char *error, size_t error_len) {
         free(x);
         return -1;
     }
-    /* file name order decides which of two results for the same game and measurement is used */
     qsort(c->items, (size_t)c->count, sizeof c->items[0], by_file_name);
     const ojh_jvalue *roots[MAX_RESULTS];
     const char *names[MAX_RESULTS];

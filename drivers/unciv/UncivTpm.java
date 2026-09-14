@@ -20,20 +20,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Locale;
 
-/**
- * OJH driver for Unciv: turns per minute, every civilization AI, no window.
- *
- * Starts a new game through Unciv's own GameStarter with real major nations from the
- * base ruleset, all played by Unciv's AI plus one spectator, and advances it with
- * GameInfo.nextTurn, the same call the game makes when a turn ends. One JSON line per
- * turn and one summary line on stdout, numbers always with a decimal point (Locale.ROOT).
- *
- * Unciv reads its rulesets from jsons/ relative to the working directory: run it from a
- * folder holding the jar's jsons/ (extract it with `jar xf Unciv.jar jsons`).
- *
- *   javac -cp Unciv.jar -d out drivers/unciv/UncivTpm.java
- *   java -Djava.awt.headless=true -cp out:Unciv.jar UncivTpm <civs> <turns> <tiny|small|medium|large|huge>
- */
 public final class UncivTpm {
     public static void main(String[] args) {
         int civs = args.length > 0 ? Integer.parseInt(args[0]) : 8;
@@ -47,8 +33,6 @@ public final class UncivTpm {
         settings.setShowTutorials(false);
         settings.setTurnsBetweenAutosaves(1_000_000);
         game.setSettings(settings);
-        // Unciv reads its rulesets through libGDX's file system, which a desktop launch sets up
-        // with its window. Headless, nothing does, and every ruleset loads empty.
         Gdx.files = new HeadlessFiles();
         RulesetCache.INSTANCE.loadRulesets(true, true);
         for (String name : RulesetCache.INSTANCE.keySet()) {
@@ -91,8 +75,6 @@ public final class UncivTpm {
         game.setGameInfo(info);
         double bootSeconds = (System.nanoTime() - bootStart) / 1e9;
 
-        // GameInfo.nextTurn(progress, isOnline) has Kotlin default arguments; javac cannot see the
-        // synthetic nextTurn$default that applies them, but reflection can. Mask 3 = both defaults.
         Method nextTurn;
         try {
             Class<?> progress = Class.forName("com.unciv.ui.screens.worldscreen.status.NextTurnProgress");

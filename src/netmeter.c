@@ -12,7 +12,7 @@
 typedef struct {
     double t;
     char label[64];
-    uint64_t bytes[2]; /* running totals when the mark was made */
+    uint64_t bytes[2];
 } mark;
 
 struct ojh_relay {
@@ -41,8 +41,6 @@ typedef struct {
     ojh_socket client, upstream;
 } pump_arg;
 
-/* Counted before forwarding, so by the time a peer has the bytes they are in the totals
-   and a turn mark made on receipt includes them. */
 static void record(ojh_relay *r, int direction, size_t n) {
     double now = ojh_now() - r->t0;
     size_t index = (size_t)(now / BUCKET_SECONDS);

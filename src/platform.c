@@ -40,8 +40,6 @@
 extern char **environ;
 #endif
 
-/* ---------------------------------------------------------------- time */
-
 double ojh_now(void) {
 #ifdef _WIN32
     static LARGE_INTEGER freq;
@@ -68,8 +66,6 @@ void ojh_sleep(double seconds) {
     }
 #endif
 }
-
-/* ---------------------------------------------------------------- threads */
 
 #ifdef _WIN32
 typedef struct {
@@ -126,8 +122,6 @@ void ojh_flag_init(ojh_flag *f, int value) { atomic_init(&f->v, value); }
 int ojh_flag_get(ojh_flag *f) { return atomic_load(&f->v); }
 int ojh_flag_exchange(ojh_flag *f, int value) { return atomic_exchange(&f->v, value); }
 #endif
-
-/* ---------------------------------------------------------------- sockets */
 
 int ojh_net_init(void) {
 #ifdef _WIN32
@@ -275,8 +269,6 @@ int ojh_send_all(ojh_socket s, const uint8_t *data, size_t len) {
     return 0;
 }
 
-/* ---------------------------------------------------------------- processes */
-
 int ojh_self_path(char *out, size_t n) {
 #ifdef _WIN32
     DWORD len = GetModuleFileNameA(NULL, out, (DWORD)n);
@@ -293,7 +285,6 @@ int ojh_self_path(char *out, size_t n) {
 }
 
 #ifdef _WIN32
-/* One argument, quoted the way the Microsoft C runtime parses a command line. */
 static int append_quoted(char *line, size_t cap, size_t *len, const char *arg) {
     size_t need = strlen(arg) * 2 + 3;
     if (*len + need + 1 > cap) return -1;
@@ -371,7 +362,6 @@ typedef struct {
     ojh_pid pid, parent;
 } pid_pair;
 
-/* Breadth first from root over (pid, parent) pairs. */
 static int tree_from_pairs(ojh_pid root, const pid_pair *pairs, int count, ojh_pid *out, int max) {
     int n = 0;
     out[n++] = root;
@@ -540,9 +530,6 @@ int ojh_process_usage(ojh_pid pid, uint64_t *memory_bytes, uint64_t *cpu_ns) {
     if (!after) return 0;
     unsigned long utime = 0, stime = 0;
     long rss_pages = 0;
-    /* after the command: state(3) ppid pgrp session tty tpgid flags minflt cminflt majflt
-       cmajflt utime(14) stime(15) cutime cstime priority nice threads itrealvalue
-       starttime vsize rss(24) */
     if (sscanf(after + 2, "%*c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu %*d %*d %*d %*d %*d %*d %*u %*u %ld",
                &utime, &stime, &rss_pages) != 3) {
         return 0;

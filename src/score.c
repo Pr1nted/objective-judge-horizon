@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 
-/* src/machine.c's workload, in rounds per second on one core, on OJH's reference CPU.
-   A machine at 2000 is taken to be twice as fast as the reference. */
 #define REFERENCE_SINGLE_CORE 1000.0
 
 double ojh_score_points(double value, double reference) {
@@ -36,7 +34,6 @@ static void reason(ojh_score *s, const char *text) {
     }
 }
 
-/* Fills a part from a catalogue statistic. */
 static void from_stat(const ojh_score *s, ojh_score_part *p, const ojh_game_results *g, const char *stat_id) {
     const ojh_stat *stat = ojh_stat_find(stat_id);
     double v;
@@ -44,7 +41,7 @@ static void from_stat(const ojh_score *s, ojh_score_part *p, const ojh_game_resu
     p->present = 1;
     p->measured = v;
     if (!p->hardware_adjusted) p->value = v;
-    else if (p->lower_is_better) p->value = v / s->hardware_factor; /* seconds it would take on the reference CPU */
+    else if (p->lower_is_better) p->value = v / s->hardware_factor;
     else p->value = v * s->hardware_factor;
 }
 
@@ -72,7 +69,6 @@ int ojh_score_game(const ojh_game_results *g, ojh_score *s) {
     const ojh_jvalue *tpm = g->result[OJH_METRIC_TPM];
     if (tpm) s->turns = (int)ojh_jnumber(ojh_jpath(tpm, "result.turns"), 0);
 
-    /* Version 2 parts. Weights add up to 1. */
     ojh_score_part *p;
     p = add(s, "turn_throughput", "Turn throughput",
             "turns per minute times players: how many player-turns the game resolves in a minute", OJH_METRIC_TPM,
@@ -141,7 +137,6 @@ int ojh_score_game(const ojh_game_results *g, ojh_score *s) {
     for (int i = 0; i < s->part_count; i++) {
         ojh_score_part *q = &s->parts[i];
         if (!q->present) continue;
-        /* A floor keeps a zero from dividing: 10 ms, 1 byte. */
         double floor_value = q->unit == OJH_UNIT_BYTES ? 1.0 : 0.01;
         q->points = q->lower_is_better ? ojh_score_points(q->reference, q->value < floor_value ? floor_value : q->value)
                                        : ojh_score_points(q->value, q->reference);
@@ -176,7 +171,7 @@ int ojh_score_game(const ojh_game_results *g, ojh_score *s) {
             at += (size_t)snprintf(text + at, sizeof text - at, "%s %s", first ? "" : ",", s->parts[i].name);
             first = 0;
         }
-        reason(s, text); /* a partial score is still a score; it says what it lacks */
+        reason(s, text);
     }
     return 0;
 }

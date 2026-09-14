@@ -37,7 +37,6 @@ if(WIN32)
     target_compile_definitions(ojh PRIVATE WIN32_LEAN_AND_MEAN _WIN32_WINNT=0x0601)
     target_link_libraries(ojh PRIVATE ws2_32 psapi advapi32 user32)
     if(MINGW)
-        # One self-contained .exe: no libgcc or winpthread DLLs to ship next to it.
         target_link_options(ojh PRIVATE -static)
     endif()
 else()

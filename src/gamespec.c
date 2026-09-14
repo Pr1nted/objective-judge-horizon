@@ -42,7 +42,6 @@ static int in_list(const char *key, const char *const *list, size_t n) {
     return 0;
 }
 
-/* 0 when every {name} in text is one OJH fills in; otherwise the first unknown one is in bad. */
 static int check_placeholders(const char *text, char *bad, size_t bad_len) {
     for (const char *p = strchr(text, '{'); p; p = strchr(p + 1, '{')) {
         const char *end = strchr(p, '}');
@@ -63,7 +62,6 @@ static int check_placeholders(const char *text, char *bad, size_t bad_len) {
     return 0;
 }
 
-/* A template string: known placeholders only. Copies it into *out. */
 static int template_string(const ojh_jvalue *v, const char *where, char **out, char *error, size_t error_len) {
     if (!v || v->type != OJH_JSTRING) return fail(error, error_len, "%s must be a string", where);
     char bad[64];
@@ -76,7 +74,6 @@ static int template_string(const ojh_jvalue *v, const char *where, char **out, c
     return *out ? 0 : fail(error, error_len, "out of memory");
 }
 
-/* An optional string copied into a fixed buffer. */
 static int optional_text(const ojh_jvalue *object, const char *key, char *dst, size_t n, char *error,
                          size_t error_len) {
     const ojh_jvalue *v = ojh_jget(object, key);
@@ -329,8 +326,6 @@ int ojh_gamespec_load(const char *path, ojh_gamespec *s, char *error, size_t err
     return 0;
 }
 
-/* ---------------------------------------------------------------- filling in */
-
 typedef struct {
     char *text;
     size_t len, cap;
@@ -376,7 +371,7 @@ char *ojh_gamespec_expand(const char *t, const ojh_gamespec *s, const ojh_spec_v
         else if (n == 8 && strncmp(open + 1, "spec_dir", 8) == 0) value = s->spec_dir;
         else if (n == 3 && strncmp(open + 1, "ojh", 3) == 0) value = v->ojh ? v->ojh : "ojh";
         if (value) put(&b, value, strlen(value));
-        else put(&b, open, n + 2); /* not a placeholder: kept as written */
+        else put(&b, open, n + 2);
         t = close + 1;
     }
     if (b.broken) {
@@ -394,12 +389,12 @@ char *ojh_gamespec_path(const ojh_gamespec *s, const char *path, int bare_names_
     int has_folder = strchr(path, '/') || strchr(path, '\\');
     if (is_absolute(path) || (bare_names_stay && !has_folder)) return dup_string(path);
     const char *rest = path;
-    while ((rest[0] == '.' && (rest[1] == '/' || rest[1] == '\\'))) rest += 2; /* "./game" is "game" in the spec's folder */
+    while ((rest[0] == '.' && (rest[1] == '/' || rest[1] == '\\'))) rest += 2;
     if (!*rest || strcmp(rest, ".") == 0) return dup_string(s->spec_dir);
     if (strcmp(s->spec_dir, ".") == 0) {
         size_t n = strlen(rest) + 3;
         char *out = malloc(n);
-        if (out) snprintf(out, n, "./%s", rest); /* keeps a folder in the name so PATH is not searched */
+        if (out) snprintf(out, n, "./%s", rest);
         return out;
     }
     size_t n = strlen(s->spec_dir) + strlen(rest) + 2;
@@ -407,8 +402,6 @@ char *ojh_gamespec_path(const ojh_gamespec *s, const char *path, int bare_names_
     if (out) snprintf(out, n, "%s/%s", s->spec_dir, rest);
     return out;
 }
-
-/* ---------------------------------------------------------------- template */
 
 static const char TEMPLATE[] =
     "{\n"

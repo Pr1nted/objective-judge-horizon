@@ -28,9 +28,6 @@ int ojh_game_parse(const char *id, ojh_game *out) {
     return -1;
 }
 
-/* ---------------------------------------------------------------- parsing helpers */
-
-/* The number after key in text, skipping quotes, colons, equals signs and spaces. */
 static int number_after(const char *text, const char *key, double *out) {
     const char *at = strstr(text, key);
     if (!at) return 0;
@@ -62,8 +59,6 @@ static void reset(ojh_game game, ojh_tpm *t) {
     t->exit_code = -1;
 }
 
-/* GD5's and Unciv's drivers print {"turn": ..., "<key>": seconds, ...} per turn and a
-   {"summary": {...}} line at the end. */
 static int parse_json_driver(const ojh_line *lines, size_t count, const char *turn_key, const char *regions_key,
                              const char *players_key, const char *kind, ojh_tpm *t) {
     for (size_t i = 0; i < count; i++) {
@@ -83,8 +78,6 @@ static int parse_json_driver(const ojh_line *lines, size_t count, const char *tu
     return t->turns > 0 ? 0 : -1;
 }
 
-/* Freeciv logs one "End/start-turn server/ai activities" line per turn (verbose log on
-   stderr). The gap between two of them is one whole turn; the first one ends start-up. */
 static int parse_freeciv(const ojh_line *lines, size_t count, ojh_tpm *t) {
     double first = -1, previous = -1;
     int markers = 0, players = 0;
@@ -112,9 +105,6 @@ static int parse_freeciv(const ojh_line *lines, size_t count, ojh_tpm *t) {
     return t->turns > 0 ? 0 : -1;
 }
 
-/* Open Doctrines' headless eval prints "[EVAL]   turn T/N  A alive ... (S s/turn)" every
-   250 turns, S being its own average since the map was ready. The last such line gives
-   T turns in S*T seconds. */
 static int parse_opendoctrines(const ojh_line *lines, size_t count, ojh_tpm *t) {
     int last_turns = 0;
     double last_average = 0;
@@ -136,7 +126,6 @@ static int parse_opendoctrines(const ojh_line *lines, size_t count, ojh_tpm *t) 
         if (strstr(s, "[EVAL] map ") && number_after(s, "countries=", &v)) {
             t->players = (int)v;
             t->boot_seconds = lines[i].t;
-            /* Printed since Open Doctrines added it for OJH; older builds leave the map size n/a. */
             if (number_after(s, "provinces=", &v) && v > 0) {
                 t->regions = (long)v;
                 snprintf(t->region_kind, sizeof t->region_kind, "provinces");
@@ -151,8 +140,6 @@ static int parse_opendoctrines(const ojh_line *lines, size_t count, ojh_tpm *t) 
     return t->turns > 0 ? 0 : -1;
 }
 
-/* Where "OJH " starts a protocol word in a line: at the start, or after a space, tab, ']'
-   or ':' so a logger's prefix ("[12:00:01] OJH turn 3") does not hide it. */
 static const char *protocol_word(const char *s) {
     for (const char *p = strstr(s, "OJH "); p; p = strstr(p + 1, "OJH ")) {
         if (p == s || p[-1] == ' ' || p[-1] == '\t' || p[-1] == ']' || p[-1] == ':') return p + 4;
@@ -193,12 +180,12 @@ int ojh_tpm_parse_spec(const ojh_gamespec *spec, const ojh_line *lines, size_t c
                 int got = sscanf(w + 4, "%d %lf", &n, &seconds);
                 markers++;
                 if (got == 2 && seconds >= 0) {
-                    push_turn(t, seconds); /* the game timed its own turn */
+                    push_turn(t, seconds);
                     reported_times++;
                 } else if (got >= 1 && previous >= 0) {
                     push_turn(t, lines[i].t - previous);
                 } else if (got >= 1 && t->boot_seconds < 0) {
-                    t->boot_seconds = lines[i].t; /* no ready line: the first turn line starts the clock */
+                    t->boot_seconds = lines[i].t;
                 }
                 previous = lines[i].t;
             } else if (word_is(w, "players")) {
@@ -224,7 +211,7 @@ int ojh_tpm_parse_spec(const ojh_gamespec *spec, const ojh_line *lines, size_t c
         if (strstr(s, spec->turn_ends)) {
             markers++;
             if (previous >= 0) push_turn(t, lines[i].t - previous);
-            else t->boot_seconds = lines[i].t; /* no start line: the first marker starts the clock */
+            else t->boot_seconds = lines[i].t;
             previous = lines[i].t;
         }
     }
@@ -277,8 +264,6 @@ int ojh_tpm_parse(ojh_game game, const ojh_line *lines, size_t count, ojh_tpm *o
     }
 }
 
-/* ---------------------------------------------------------------- running */
-
 static void join_path(char *out, size_t n, const char *dir, const char *name) {
     size_t len = strlen(dir);
     snprintf(out, n, "%s%s%s", dir, (len > 0 && (dir[len - 1] == '/' || dir[len - 1] == '\\')) ? "" : "/", name);
@@ -289,13 +274,11 @@ static int fail(char *error, size_t len, const char *message) {
     return -1;
 }
 
-/* Runs argv to completion and parses what it printed. */
 static int run_and_parse(ojh_game game, const ojh_gamespec *spec, const char *const *argv, const char *const *env,
                          const char *cwd, double timeout, ojh_tpm *out, char *error, size_t error_len) {
     double t0 = ojh_now();
     ojh_run *r = ojh_run_start(argv, env, cwd);
     if (!r) return fail(error, error_len, "the program did not start (is the path right?)");
-    /* Sampled from outside, over the game and every process it starts, ten times a second. */
     ojh_procmeter *meter = ojh_procmeter_start(ojh_run_pid(r), 0.1);
     int code = ojh_run_wait(r, timeout);
     double wall = ojh_now() - t0;
@@ -312,15 +295,12 @@ static int run_and_parse(ojh_game game, const ojh_gamespec *spec, const char *co
     out->wall_seconds = wall;
     if (meter && ojh_procmeter_summarise(meter, 0, -1, &out->run_resources) > 0) {
         out->has_resources = 1;
-        /* The turns ran from the end of start-up until start-up plus the time they took. When
-           start-up is unknown, the whole run stands in. */
         double from = out->boot_seconds >= 0 ? out->boot_seconds : 0;
         double to = out->boot_seconds >= 0 && out->play_seconds > 0 ? out->boot_seconds + out->play_seconds : -1;
         if (ojh_procmeter_summarise(meter, from, to, &out->turn_resources) == 0) out->turn_resources = out->run_resources;
     }
     ojh_procmeter_free(meter);
     if (parsed != 0 && error && error_len) {
-        /* The last few lines usually say why. */
         size_t at = 0;
         at += (size_t)snprintf(error, error_len, "no turns found (exit %d); last lines:", code);
         for (size_t i = count > 5 ? count - 5 : 0; i < count && at < error_len; i++) {
@@ -367,7 +347,6 @@ int ojh_tpm_run(ojh_game game, const ojh_tpm_options *o, ojh_tpm *out, char *err
             ojh_make_dir(saves);
             FILE *f = fopen(script, "wb");
             if (!f) return fail(error, error_len, "cannot write the Freeciv start-up script");
-            /* Freeciv's own recipe for a server-only autogame (doc/HACKING). */
             fprintf(f, "set gameseed %u\nset mapseed %u\nset timeout -1\nset minplayers 0\nset ec_turns 0\n"
                        "set aifill %d\nset endturn %d\nset autosaves \"\"\nhard\ncreate Bench\nstart\n",
                     o->seed, o->seed, o->players, o->turns);
@@ -387,7 +366,6 @@ int ojh_tpm_run(ojh_game game, const ojh_tpm_options *o, ojh_tpm *out, char *err
             ojh_make_dir(o->work_dir);
             ojh_make_dir(classes);
             ojh_make_dir(assets);
-            /* Unciv reads its rulesets from jsons/ under the working directory; the jar has them. */
             const char *extract[] = {o->jar_tool, "xf", o->unciv_jar, "jsons", NULL};
             ojh_run *x = ojh_run_start(extract, NULL, assets);
             if (!x) return fail(error, error_len, "the jar tool did not start");
@@ -439,7 +417,6 @@ int ojh_tpm_run_spec(const ojh_gamespec *spec, const ojh_tpm_options *o, ojh_tpm
             goto done;
         }
         if (i == 0) {
-            /* "./MyGame" is next to the spec; "python3" is found on PATH. */
             argv[0] = ojh_gamespec_path(spec, filled, 1);
             free(filled);
             if (!argv[0]) {
@@ -491,8 +468,6 @@ done:
     return status;
 }
 
-/* ---------------------------------------------------------------- results */
-
 double ojh_tpm_value(const ojh_tpm *t) {
     return t->turns > 0 && t->play_seconds > 0 ? t->turns / (t->play_seconds / 60.0) : 0.0;
 }
@@ -502,7 +477,6 @@ static int compare_double(const void *a, const void *b) {
     return (x > y) - (x < y);
 }
 
-/* Median of turn_seconds[from, to). */
 static double median_of(const double *values, int from, int to) {
     int n = to - from;
     if (n <= 0) return 0;
@@ -577,7 +551,6 @@ void ojh_tpm_json(ojh_json *w, const ojh_tpm *t) {
     }
     ojh_json_key(w, "turn_series_seconds");
     if (t->timed_turns > 1) {
-        /* At most 400 points: a long run is averaged into that many equal slices. */
         int points = t->timed_turns < 400 ? t->timed_turns : 400;
         ojh_json_array(w);
         for (int p = 0; p < points; p++) {

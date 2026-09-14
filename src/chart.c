@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Okabe-Ito, readable for the common kinds of colour blindness, then two extras. */
 static const char *const PALETTE[] = {"#0072B2", "#E69F00", "#009E73", "#CC79A7", "#56B4E9",
                                       "#D55E00", "#8C6D1F", "#5B5B8F", "#7A9A01", "#B03A48"};
 #define PALETTE_SIZE (sizeof PALETTE / sizeof PALETTE[0])
@@ -17,13 +16,10 @@ static const char *const PALETTE[] = {"#0072B2", "#E69F00", "#009E73", "#CC79A7"
 #define FONT "font-family=\"Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif\""
 
 const char *ojh_game_colour(const char *game_id) {
-    /* FNV-1a: stable across runs, machines and the order games appear in. */
     unsigned long h = 2166136261ul;
     for (const char *c = game_id ? game_id : ""; *c; c++) h = (h ^ (unsigned char)*c) * 16777619ul;
     return PALETTE[h % PALETTE_SIZE];
 }
-
-/* ---------------------------------------------------------------- numbers */
 
 static void grouped_int(char *out, size_t n, double value) {
     long long x = (long long)(value < 0 ? value - 0.5 : value + 0.5);
@@ -64,7 +60,7 @@ void ojh_format_value(char *out, size_t n, double v, ojh_unit unit, const char *
             else snprintf(out, n, "%.*f s", fabs(v) < 0.1 ? 4 : fabs(v) < 10 ? 3 : 1, v);
             return;
         case OJH_UNIT_RATIO:
-            snprintf(out, n, "%.2f%s", v, word ? word : ""); /* "7.08x" */
+            snprintf(out, n, "%.2f%s", v, word ? word : "");
             return;
         case OJH_UNIT_PERCENT:
             snprintf(out, n, "%.0f%%", v);
@@ -80,7 +76,6 @@ void ojh_format_value(char *out, size_t n, double v, ojh_unit unit, const char *
         snprintf(number, sizeof number, "%.*f", fabs(v) < 1 ? 3 : 2, v);
     }
     if (word && *word) suffix = word;
-    /* joined by hand: the pieces are bounded, and snprintf of unknown lengths trips GCC's truncation check */
     size_t at = 0;
     const char *pieces[3] = {number, *suffix ? " " : "", suffix};
     for (int i = 0; i < 3 && n > 0; i++) {
@@ -88,8 +83,6 @@ void ojh_format_value(char *out, size_t n, double v, ojh_unit unit, const char *
     }
     if (n > 0) out[at] = '\0';
 }
-
-/* ---------------------------------------------------------------- SVG pieces */
 
 static void xml(FILE *f, const char *s) {
     for (; s && *s; s++) {
@@ -101,7 +94,6 @@ static void xml(FILE *f, const char *s) {
     }
 }
 
-/* Roughly how wide text is at a font size, for laying out labels without a font engine. */
 static double text_width(const char *s, double size) {
     double w = 0;
     for (; s && *s; s++) {
@@ -136,7 +128,6 @@ static int finish(FILE *f) {
     return fclose(f) == 0 ? 0 : -1;
 }
 
-/* A round step so an axis of span has about `ticks` divisions. */
 static double nice_step(double span, int ticks) {
     if (!(span > 0)) return 1;
     double raw = span / ticks;
@@ -145,8 +136,6 @@ static double nice_step(double span, int ticks) {
     double step = r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10;
     return step * magnitude;
 }
-
-/* ---------------------------------------------------------------- bars */
 
 int ojh_chart_bars_svg(const char *path, const char *title, const char *subtitle, ojh_unit unit, const char *word,
                        const ojh_bar *bars, int count) {
@@ -235,8 +224,6 @@ void ojh_chart_bars_text(FILE *f, const char *title, ojh_unit unit, const char *
     fputc('\n', f);
 }
 
-/* ---------------------------------------------------------------- ranges */
-
 int ojh_chart_ranges_svg(const char *path, const char *title, const char *subtitle, ojh_unit unit, const char *word,
                          const char *low_name, const char *middle_name, const char *high_name,
                          const ojh_range *ranges, int count) {
@@ -266,7 +253,6 @@ int ojh_chart_ranges_svg(const char *path, const char *title, const char *subtit
     #define XPOS(v) (log_scale ? left + plot * ((log10((v) > 0 ? (v) : pow(10, a)) - a) / (b - a > 0 ? b - a : 1)) \
                                : left + plot * (v) / axis)
 
-    /* legend */
     fprintf(f, "<g " FONT " font-size=\"11.5\" fill=\"" MUTED "\">"
                "<line x1=\"24\" y1=\"74\" x2=\"52\" y2=\"74\" stroke=\"" MUTED "\" stroke-width=\"4\" stroke-linecap=\"round\"/>"
                "<text x=\"58\" y=\"78\">");
@@ -353,8 +339,6 @@ void ojh_chart_ranges_text(FILE *f, const char *title, ojh_unit unit, const char
     fputc('\n', f);
 }
 
-/* ---------------------------------------------------------------- lines */
-
 int ojh_chart_lines_svg(const char *path, const char *title, const char *subtitle, const char *x_name,
                         ojh_unit unit, const char *word, const ojh_series *series, int count, int x_as_share) {
     const int left = 84, right = 24, top = 76, bottom = 74, width = 760, height = 420;
@@ -412,7 +396,6 @@ int ojh_chart_lines_svg(const char *path, const char *title, const char *subtitl
         }
         fputs("\"/>\n", f);
     }
-    /* legend, one row under the axis title */
     double lx = left;
     for (int s = 0; s < count; s++) {
         const char *colour = ojh_game_colour(series[s].game_id);

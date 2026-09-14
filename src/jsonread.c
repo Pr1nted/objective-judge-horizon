@@ -41,7 +41,6 @@ static int literal(parser *p, const char *word) {
 
 static void free_contents(ojh_jvalue *v);
 
-/* Appends UTF-8 for a code point. */
 static size_t put_utf8(char *out, unsigned long cp) {
     if (cp < 0x80) {
         out[0] = (char)cp;
@@ -81,7 +80,6 @@ static int hex4(parser *p, unsigned long *out) {
     return 1;
 }
 
-/* A string starting at the opening quote. The result is never longer than the source. */
 static char *parse_string(parser *p) {
     if (peek(p) != '"') {
         set_error(p, "expected a string");
@@ -162,7 +160,7 @@ static int add_item(parser *p, ojh_jvalue *container, size_t *cap, ojh_jvalue **
 
 static int parse_array(parser *p, ojh_jvalue *v) {
     v->type = OJH_JARRAY;
-    p->at++; /* [ */
+    p->at++;
     size_t cap = 0;
     skip_space(p);
     if (peek(p) == ']') {
@@ -188,7 +186,7 @@ static int parse_array(parser *p, ojh_jvalue *v) {
 
 static int parse_object(parser *p, ojh_jvalue *v) {
     v->type = OJH_JOBJECT;
-    p->at++; /* { */
+    p->at++;
     size_t cap = 0;
     skip_space(p);
     if (peek(p) == '}') {
@@ -309,7 +307,7 @@ ojh_jvalue *ojh_jparse(const char *text, size_t len, char *error, size_t error_l
     ojh_jvalue *root = calloc(1, sizeof *root);
     if (!root) return NULL;
     if (len >= 3 && (unsigned char)text[0] == 0xEF && (unsigned char)text[1] == 0xBB && (unsigned char)text[2] == 0xBF) {
-        p.at = 3; /* a UTF-8 byte order mark */
+        p.at = 3;
     }
     if (!parse_value(&p, root)) {
         ojh_jfree(root);

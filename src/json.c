@@ -15,7 +15,6 @@ static void indent(ojh_json *w, int depth) {
     for (int i = 0; i < depth; i++) fputs("  ", w->out);
 }
 
-/* Before any value or key: a comma after the previous item, and a fresh indented line. */
 static void separate(ojh_json *w) {
     if (w->after_key) {
         w->after_key = 0;

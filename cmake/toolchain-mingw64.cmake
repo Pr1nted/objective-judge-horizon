@@ -1,6 +1,3 @@
-# Cross-compile the Windows build from macOS or Linux with MinGW-w64:
-#   cmake -S . -B build-windows -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-mingw64.cmake
-# With Wine installed, ctest runs the Windows tests through it.
 set(CMAKE_SYSTEM_NAME Windows)
 set(CMAKE_SYSTEM_PROCESSOR x86_64)
 set(CMAKE_C_COMPILER x86_64-w64-mingw32-gcc)

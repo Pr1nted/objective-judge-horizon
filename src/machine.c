@@ -31,7 +31,6 @@ static void copy_trimmed(char *dst, size_t n, const char *src) {
     dst[len] = '\0';
 }
 
-/* The value after "<label>:" on the first line of a command's output that has one. */
 static int command_field(const char *command, const char *label, char *out, size_t n) {
     FILE *p = popen(command, "r");
     if (!p) return 0;
@@ -159,8 +158,6 @@ static int compare_u32(const void *a, const void *b) {
     return (x > y) - (x < y);
 }
 
-/* Hashing, sorting and mixing a buffer: integer, memory and branch work, no I/O. The
-   same bytes in the same order on every machine. */
 static uint64_t workload(double seconds) {
     enum { BLOCK = 1 << 16, NUMS = 4096 };
     uint8_t *block = malloc(BLOCK);

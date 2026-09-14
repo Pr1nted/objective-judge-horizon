@@ -12,7 +12,7 @@
 #define MAX_RESULTS 64
 #define MAX_COLUMNS 12
 #define MAX_ROWS (MAX_RESULTS + 1)
-#define CELL 128
+#define CELL 192 /* holds the longest line put in a table (the CPU reference score, 160 bytes) */
 #define TEXT_WIDTH 88
 
 /* ---------------------------------------------------------------- collecting results */

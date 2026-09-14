@@ -8,7 +8,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "footprint.h"
 #include "gamespec.h"
+#include "net.h"
 #include "json.h"
 #include "jsonread.h"
 #include "machine.h"
@@ -37,10 +39,14 @@ static int usage(void) {
           "                                         turns per minute, every player AI\n"
           "  ojh report <folder>                    report.md and report.txt, and every game's scorecard, from the\n"
           "                                         result files in a folder\n"
+          "  ojh footprint <game|your-game.json> [the tpm options] [--od-save FILE] [--freeciv-prefix DIR]\n"
+          "                                         install size, save size, save time and load time\n"
+          "  ojh net <game|your-game.json> [the tpm options] [--clients N] [--freeciv-client PATH]\n"
+          "                                         netcode on loopback: data per turn, information per minute, delivery\n"
           "  ojh score <result.json>... [--out DIR] each game's own OJH score and scorecard\n"
           "  ojh spec new <your-game.json>          a game spec to fill in, for putting your own game through OJH\n"
           "  ojh spec check <your-game.json>        what OJH will run for that spec\n"
-          "  ojh selftest sha256|json|jsonread|relay|procmeter|runner|tpm|report|spec|score\n",
+          "  ojh selftest sha256|json|jsonread|relay|procmeter|runner|tpm|report|spec|score|footprint|net\n",
           stderr);
     return 2;
 }
@@ -234,6 +240,390 @@ static int cmd_report(int argc, char **argv) {
     }
     fprintf(stderr, "report: wrote %s/report.md and %s/report.txt\n", argv[2], argv[2]);
     return 0;
+}
+
+static int cmd_footprint(int argc, char **argv) {
+    if (argc < 3) return usage();
+    ojh_game game = OJH_GAME_CUSTOM;
+    ojh_gamespec spec;
+    memset(&spec, 0, sizeof spec);
+    int from_spec = ends_with(argv[2], ".json");
+    if (from_spec) {
+        char why[1024];
+        if (ojh_gamespec_load(argv[2], &spec, why, sizeof why) != 0) {
+            fprintf(stderr, "footprint: %s\n", why);
+            return 2;
+        }
+    } else if (ojh_game_parse(argv[2], &game) != 0) {
+        fprintf(stderr, "footprint: unknown game '%s'\n", argv[2]);
+        return 2;
+    }
+    const char *tmp = getenv("TMPDIR");
+    if (!tmp) tmp = getenv("TEMP");
+    if (!tmp) tmp = ".";
+    static char work[1024], self[1024];
+    snprintf(work, sizeof work, "%s/ojh-work", tmp);
+    ojh_tpm_options o;
+    memset(&o, 0, sizeof o);
+    o.turns = from_spec ? spec.default_turns : 20;
+    o.seed = 20260914u;
+    o.players = 8;
+    o.freeciv_server = "freeciv-server";
+    o.java = "java";
+    o.javac = "javac";
+    o.jar_tool = "jar";
+    o.drivers_dir = "drivers";
+    o.work_dir = work;
+    if (ojh_self_path(self, sizeof self) == 0) o.ojh_path = self;
+    const char *out_path = NULL;
+    for (int i = 3; i < argc; i += 2) {
+        const char *a = argv[i];
+        const char *v = i + 1 < argc ? argv[i + 1] : NULL;
+        if (!v) {
+            fprintf(stderr, "footprint: %s needs a value\n", a);
+            return 2;
+        }
+        if (strcmp(a, "--turns") == 0) o.turns = atoi(v);
+        else if (strcmp(a, "--seed") == 0) o.seed = (unsigned)strtoul(v, NULL, 10);
+        else if (strcmp(a, "--players") == 0) o.players = atoi(v);
+        else if (strcmp(a, "--timeout") == 0) o.timeout_seconds = atof(v);
+        else if (strcmp(a, "--od-server") == 0) o.od_server = v;
+        else if (strcmp(a, "--od-data") == 0) o.od_data = v;
+        else if (strcmp(a, "--od-save") == 0) o.od_save = v;
+        else if (strcmp(a, "--gd5-python") == 0) o.gd5_python = v;
+        else if (strcmp(a, "--gd5-dir") == 0) o.gd5_dir = v;
+        else if (strcmp(a, "--freeciv-server") == 0) o.freeciv_server = v;
+        else if (strcmp(a, "--freeciv-prefix") == 0) o.freeciv_prefix = v;
+        else if (strcmp(a, "--unciv-jar") == 0) o.unciv_jar = v;
+        else if (strcmp(a, "--java") == 0) o.java = v;
+        else if (strcmp(a, "--javac") == 0) o.javac = v;
+        else if (strcmp(a, "--jar") == 0) o.jar_tool = v;
+        else if (strcmp(a, "--drivers") == 0) o.drivers_dir = v;
+        else if (strcmp(a, "--work") == 0) o.work_dir = v;
+        else if (strcmp(a, "--out") == 0) out_path = v;
+        else {
+            fprintf(stderr, "footprint: unknown option %s\n", a);
+            return 2;
+        }
+    }
+    if (o.turns < 1) o.turns = 1;
+    const char *name = from_spec ? spec.name : ojh_game_name(game);
+    ojh_machine m;
+    ojh_reference ref;
+    ojh_machine_read(&m);
+    fprintf(stderr, "footprint: measuring this machine's reference score\n");
+    ojh_reference_measure(&ref, 3.0);
+    fprintf(stderr, "footprint: %s\n", name);
+    ojh_footprint result;
+    char error[1024] = "";
+    int status = from_spec ? ojh_footprint_run_spec(&spec, &o, &result, error, sizeof error)
+                           : ojh_footprint_run(game, &o, &result, error, sizeof error);
+    FILE *out = out_path ? fopen(out_path, "wb") : stdout;
+    if (!out) {
+        fprintf(stderr, "footprint: cannot write %s\n", out_path);
+        ojh_gamespec_free(&spec);
+        return 1;
+    }
+    ojh_json w;
+    ojh_json_init(&w, out);
+    ojh_json_object(&w);
+    ojh_json_key(&w, "ojh_version"); ojh_json_string(&w, OJH_VERSION);
+    ojh_json_key(&w, "metric"); ojh_json_string(&w, "footprint");
+    ojh_json_key(&w, "machine"); ojh_machine_json(&w, &m, &ref);
+    ojh_json_key(&w, "settings");
+    ojh_json_object(&w);
+    ojh_json_key(&w, "turns_requested"); ojh_json_int(&w, o.turns);
+    ojh_json_key(&w, "seed"); ojh_json_uint(&w, o.seed);
+    ojh_json_key(&w, "players_requested"); ojh_json_int(&w, o.players);
+    if (from_spec) {
+        ojh_json_key(&w, "spec"); ojh_json_string(&w, argv[2]);
+    }
+    ojh_json_end_object(&w);
+    ojh_json_key(&w, "result"); ojh_footprint_json(&w, &result);
+    ojh_json_key(&w, "error");
+    if (status == 0) ojh_json_null(&w);
+    else ojh_json_string(&w, error);
+    ojh_json_end_object(&w);
+    if (out != stdout) fclose(out);
+    char install[64] = "n/a", save[64] = "n/a";
+    if (result.has_install) ojh_format_value(install, sizeof install, (double)result.install_bytes, OJH_UNIT_BYTES, NULL);
+    if (result.has_save) ojh_format_value(save, sizeof save, (double)result.save_bytes, OJH_UNIT_BYTES, NULL);
+    if (status == 0) {
+        fprintf(stderr, "footprint: %s install %s, save %s, save %.3f s, load %.3f s\n", name, install, save,
+                result.save_seconds, result.load_seconds);
+    } else {
+        fprintf(stderr, "footprint: %s failed: %s\n", name, error);
+    }
+    ojh_gamespec_free(&spec);
+    return status == 0 ? 0 : 1;
+}
+
+static uint16_t free_port(void) {
+    uint16_t port = 0;
+    ojh_socket s = ojh_listen_loopback(0, &port);
+    if (s != OJH_INVALID_SOCKET) ojh_sock_close(s);
+    return port;
+}
+
+static int cmd_net(int argc, char **argv) {
+    if (argc < 3) return usage();
+    ojh_game game = OJH_GAME_CUSTOM;
+    ojh_gamespec spec;
+    memset(&spec, 0, sizeof spec);
+    int from_spec = ends_with(argv[2], ".json");
+    if (from_spec) {
+        char why[1024];
+        if (ojh_gamespec_load(argv[2], &spec, why, sizeof why) != 0) {
+            fprintf(stderr, "net: %s\n", why);
+            return 2;
+        }
+    } else if (ojh_game_parse(argv[2], &game) != 0) {
+        fprintf(stderr, "net: unknown game '%s'\n", argv[2]);
+        return 2;
+    }
+    const char *tmp = getenv("TMPDIR");
+    if (!tmp) tmp = getenv("TEMP");
+    if (!tmp) tmp = ".";
+    static char work[1024], self[1024];
+    snprintf(work, sizeof work, "%s/ojh-work", tmp);
+    ojh_tpm_options o;
+    memset(&o, 0, sizeof o);
+    o.turns = from_spec ? spec.default_turns : 20;
+    o.seed = 20260914u;
+    o.players = 8;
+    o.freeciv_server = "freeciv-server";
+    o.java = "java";
+    o.javac = "javac";
+    o.jar_tool = "jar";
+    o.drivers_dir = "drivers";
+    o.work_dir = work;
+    if (ojh_self_path(self, sizeof self) == 0) o.ojh_path = self;
+    const char *out_path = NULL, *freeciv_client = "freeciv-gtk4";
+    int clients = from_spec && spec.net_clients > 0 ? spec.net_clients : 2;
+    for (int i = 3; i < argc; i += 2) {
+        const char *a = argv[i];
+        const char *v = i + 1 < argc ? argv[i + 1] : NULL;
+        if (!v) {
+            fprintf(stderr, "net: %s needs a value\n", a);
+            return 2;
+        }
+        if (strcmp(a, "--turns") == 0) o.turns = atoi(v);
+        else if (strcmp(a, "--seed") == 0) o.seed = (unsigned)strtoul(v, NULL, 10);
+        else if (strcmp(a, "--players") == 0) o.players = atoi(v);
+        else if (strcmp(a, "--clients") == 0) clients = atoi(v);
+        else if (strcmp(a, "--timeout") == 0) o.timeout_seconds = atof(v);
+        else if (strcmp(a, "--od-server") == 0) o.od_server = v;
+        else if (strcmp(a, "--od-data") == 0) o.od_data = v;
+        else if (strcmp(a, "--gd5-python") == 0) o.gd5_python = v;
+        else if (strcmp(a, "--gd5-dir") == 0) o.gd5_dir = v;
+        else if (strcmp(a, "--freeciv-server") == 0) o.freeciv_server = v;
+        else if (strcmp(a, "--freeciv-client") == 0) freeciv_client = v;
+        else if (strcmp(a, "--unciv-jar") == 0) o.unciv_jar = v;
+        else if (strcmp(a, "--java") == 0) o.java = v;
+        else if (strcmp(a, "--javac") == 0) o.javac = v;
+        else if (strcmp(a, "--jar") == 0) o.jar_tool = v;
+        else if (strcmp(a, "--drivers") == 0) o.drivers_dir = v;
+        else if (strcmp(a, "--work") == 0) o.work_dir = v;
+        else if (strcmp(a, "--out") == 0) out_path = v;
+        else {
+            fprintf(stderr, "net: unknown option %s\n", a);
+            return 2;
+        }
+    }
+    if (o.turns < 1) o.turns = 1;
+    if (clients < 1) clients = 1;
+    if (clients > OJH_NET_MAX_CLIENTS) clients = OJH_NET_MAX_CLIENTS;
+    ojh_make_dir(o.work_dir);
+
+    ojh_net result;
+    memset(&result, 0, sizeof result);
+    snprintf(result.id, sizeof result.id, "%s", from_spec ? spec.id : ojh_game_id(game));
+    snprintf(result.name, sizeof result.name, "%s", from_spec ? spec.name : ojh_game_name(game));
+    if (from_spec) snprintf(result.version, sizeof result.version, "%s", spec.version);
+    ojh_net_plan plan;
+    memset(&plan, 0, sizeof plan);
+    plan.turns = o.turns;
+    plan.clients = clients;
+    plan.timeout_seconds = o.timeout_seconds > 0 ? o.timeout_seconds : 3600;
+    plan.server_port = free_port();
+    char error[2048] = "";
+    int status = -1;
+    char turns_text[16], clients_text[16], players_text[16], seed_text[16];
+    snprintf(turns_text, sizeof turns_text, "%d", o.turns);
+    snprintf(clients_text, sizeof clients_text, "%d", clients);
+    snprintf(players_text, sizeof players_text, "%d", o.players);
+    snprintf(seed_text, sizeof seed_text, "%u", o.seed);
+
+    char *expanded[3][64] = {{0}};
+    if (from_spec) {
+        if (!spec.has_network) {
+            snprintf(error, sizeof error, "the spec has no \"network\" section, so there is no netcode to measure");
+        } else {
+            ojh_spec_values values = {o.turns, o.seed, o.players, o.work_dir, o.ojh_path};
+            for (int i = 0; i < spec.net_server_count && i < 63; i++) {
+                char *filled = ojh_gamespec_expand(spec.net_server[i], &spec, &values);
+                expanded[0][i] = i == 0 && filled ? ojh_gamespec_path(&spec, filled, 1) : filled;
+                if (i == 0) free(filled);
+            }
+            for (int i = 0; i < spec.net_client_count && i < 63; i++) {
+                char *filled = ojh_gamespec_expand(spec.net_client[i], &spec, &values);
+                expanded[1][i] = i == 0 && filled ? ojh_gamespec_path(&spec, filled, 1) : filled;
+                if (i == 0) free(filled);
+            }
+            for (int i = 0; i < spec.net_after_connect_count && i < 63; i++) {
+                expanded[2][i] = ojh_gamespec_expand(spec.net_after_connect[i], &spec, &values);
+            }
+            plan.mode = OJH_NET_RELAY;
+            plan.server = (const char *const *)expanded[0];
+            plan.client = (const char *const *)expanded[1];
+            plan.after_connect = spec.net_after_connect_count ? (const char *const *)expanded[2] : NULL;
+            plan.server_input = spec.net_after_connect_count > 0;
+            plan.server_port = (uint16_t)spec.net_server_port;
+            plan.ready_when = spec.net_ready_when;
+            plan.connected_when = spec.net_connected_when;
+            plan.turns_from_protocol = spec.turns_from == OJH_TURNS_PROTOCOL;
+            plan.turn_ends = spec.turn_ends;
+            plan.players = spec.players;
+            plan.transport = "tcp";
+            status = ojh_net_run(&plan, &result, error, sizeof error);
+            snprintf(result.how, sizeof result.how,
+                     "the spec's server and %d client(s) on this machine, every byte through OJH's loopback relay; a turn "
+                     "ends at %s", clients, plan.turns_from_protocol ? "the server's OJH turn lines" : "the spec's marker line");
+        }
+    } else if (game == OJH_GAME_FREECIV) {
+        char dir[1100], saves[1200], script[1200], port_text[16];
+        snprintf(dir, sizeof dir, "%s/freeciv-net", o.work_dir);
+        snprintf(saves, sizeof saves, "%s/saves", dir);
+        snprintf(script, sizeof script, "%s/net.serv", dir);
+        ojh_make_dir(dir);
+        ojh_make_dir(saves);
+        FILE *f = fopen(script, "wb");
+        if (f) {
+            fprintf(f, "set gameseed %u\nset mapseed %u\nset timeout -1\nset minplayers 0\nset ec_turns 0\nset aifill %d\n"
+                       "set endturn %d\nset autosaves \"\"\nhard\n", o.seed, o.seed, o.players, o.turns);
+            fclose(f);
+        }
+        snprintf(port_text, sizeof port_text, "%u", (unsigned)plan.server_port);
+        const char *server[] = {o.freeciv_server, "-p", port_text, "-s", saves, "-r", script, "-d", "v", "-e", NULL};
+        const char *client[] = {freeciv_client, "-a", "-s", "127.0.0.1", "-p", "{relay_port}", "-n", "ojh{client}", NULL};
+        static char after[OJH_NET_MAX_CLIENTS + 2][64];
+        const char *after_list[OJH_NET_MAX_CLIENTS + 2];
+        for (int c = 0; c < clients; c++) {
+            snprintf(after[c], sizeof after[c], "observe ojh%d", c + 1);
+            after_list[c] = after[c];
+        }
+        after_list[clients] = "start";
+        after_list[clients + 1] = NULL;
+        const char *env[] = {"LC_ALL=C", "LANG=C", NULL};
+        plan.mode = OJH_NET_RELAY;
+        plan.server = server;
+        plan.server_env = env;
+        plan.server_cwd = dir;
+        plan.server_input = 1;
+        plan.ready_when = "Now accepting new client connections";
+        plan.client = client;
+        plan.connected_when = "has connected from";
+        plan.after_connect = after_list;
+        plan.turn_ends = "End/start-turn server/ai activities:";
+        plan.players = o.players;
+        plan.transport = "Freeciv client/server protocol over TCP";
+        status = ojh_net_run(&plan, &result, error, sizeof error);
+        snprintf(result.how, sizeof result.how,
+                 "freeciv-server with %d AI players and %d freeciv-gtk4 clients on this machine, each attached as a global "
+                 "observer, every byte through OJH's loopback relay; a turn ends at the server's End/start-turn log line",
+                 o.players, clients);
+    } else if (game == OJH_GAME_GD5) {
+        if (!o.gd5_python || !o.gd5_dir) {
+            snprintf(error, sizeof error, "needs --gd5-python and --gd5-dir");
+        } else {
+            static char driver[1100], invite[1100], port_text[16];
+            snprintf(driver, sizeof driver, "%s/gd5_net.py", o.drivers_dir);
+            snprintf(invite, sizeof invite, "%s/gd5-invite.txt", o.work_dir);
+            remove(invite);
+            snprintf(port_text, sizeof port_text, "%u", (unsigned)plan.server_port);
+            const char *server[] = {o.gd5_python, driver, "host", "--gd5", o.gd5_dir, "--port", port_text, "--relay-port",
+                                    "{relay_port}", "--clients", clients_text, "--turns", turns_text, "--work", o.work_dir,
+                                    NULL};
+            const char *client[] = {o.gd5_python, driver, "client", "--gd5", o.gd5_dir, "--invite-file", invite, "--name",
+                                    "OJH {client}", NULL};
+            plan.mode = OJH_NET_RELAY;
+            plan.server = server;
+            plan.ready_when = "OJH ready";
+            plan.client = client;
+            plan.turns_from_protocol = 1;
+            plan.players = 0;
+            plan.transport = "GD5 real-time protocol over TLS";
+            status = ojh_net_run(&plan, &result, error, sizeof error);
+            snprintf(result.how, sizeof result.how,
+                     "GD5's own real-time server (RealtimeServer and MapRealtimeDriver) hosting the 1939 scenario, with %d "
+                     "real RealtimeClient guests joining through OJH's loopback relay and submitting every turn; turns end "
+                     "when the server opens the next one", clients);
+        }
+    } else if (game == OJH_GAME_UNCIV) {
+        char classpath[9000], assets[4400];
+        if (ojh_unciv_prepare(&o, classpath, sizeof classpath, assets, sizeof assets, error, sizeof error) == 0) {
+            const char *server[] = {o.java, "-Djava.awt.headless=true", "-cp", classpath, "UncivTpm", players_text, turns_text,
+                                    "small", "net", NULL};
+            plan.mode = OJH_NET_REPORTED;
+            plan.server = server;
+            plan.server_cwd = assets;
+            plan.turns_from_protocol = 1;
+            plan.data_line = "data";
+            plan.players = o.players;
+            plan.transport = "whole-game upload after each turn";
+            status = ojh_net_run(&plan, &result, error, sizeof error);
+            snprintf(result.how, sizeof result.how,
+                     "Unciv has no live connection: its multiplayer uploads the whole game after a turn and the other "
+                     "player downloads it. OJH's Unciv driver plays %d turns with %d civilizations and reports the size of "
+                     "that compressed game after each one, counted once up and once down; no relay, so turn delivery is n/a",
+                     o.turns, o.players);
+        }
+    } else {
+        snprintf(error, sizeof error,
+                 "Open Doctrines has no client that can join a match without a window, so OJH cannot drive its netcode yet");
+    }
+    (void)seed_text;
+
+    ojh_machine m;
+    ojh_reference ref;
+    ojh_machine_read(&m);
+    ojh_reference_measure(&ref, 3.0);
+    FILE *out = out_path ? fopen(out_path, "wb") : stdout;
+    if (out) {
+        ojh_json w;
+        ojh_json_init(&w, out);
+        ojh_json_object(&w);
+        ojh_json_key(&w, "ojh_version"); ojh_json_string(&w, OJH_VERSION);
+        ojh_json_key(&w, "metric"); ojh_json_string(&w, "net");
+        ojh_json_key(&w, "machine"); ojh_machine_json(&w, &m, &ref);
+        ojh_json_key(&w, "settings");
+        ojh_json_object(&w);
+        ojh_json_key(&w, "turns_requested"); ojh_json_int(&w, o.turns);
+        ojh_json_key(&w, "seed"); ojh_json_uint(&w, o.seed);
+        ojh_json_key(&w, "players_requested"); ojh_json_int(&w, o.players);
+        ojh_json_key(&w, "clients"); ojh_json_int(&w, clients);
+        ojh_json_end_object(&w);
+        ojh_json_key(&w, "result"); ojh_net_json(&w, &result);
+        ojh_json_key(&w, "error");
+        if (status == 0) ojh_json_null(&w);
+        else ojh_json_string(&w, error);
+        ojh_json_end_object(&w);
+        if (out != stdout) fclose(out);
+    }
+    if (status == 0) {
+        char low[64], high[64], nipm[64];
+        ojh_format_value(low, sizeof low, (double)result.dpt_lowest, OJH_UNIT_BYTES, NULL);
+        ojh_format_value(high, sizeof high, (double)result.dpt_highest, OJH_UNIT_BYTES, NULL);
+        ojh_format_value(nipm, sizeof nipm, result.nipm_bytes_per_minute, OJH_UNIT_BYTES, "/min");
+        fprintf(stderr, "net: %s %d turns, data per turn %s to %s, %s\n", result.name, result.turns, low, high, nipm);
+    } else {
+        fprintf(stderr, "net: %s failed: %s\n", result.name, error);
+    }
+    for (int k = 0; k < 3; k++) {
+        for (int i = 0; i < 64; i++) free(expanded[k][i]);
+    }
+    ojh_gamespec_free(&spec);
+    return status == 0 ? 0 : 1;
 }
 
 static int cmd_score(int argc, char **argv) {
@@ -763,6 +1153,7 @@ static int sample_game(int argc, char **argv) {
     int turns = argc > 3 ? atoi(argv[3]) : 10;
     int players = argc > 4 ? atoi(argv[4]) : 4;
     int plain = argc > 5 && strcmp(argv[5], "plain") == 0;
+    int footprint = argc > 5 && strcmp(argv[5], "footprint") == 0;
     if (turns < 1) turns = 1;
     if (players < 1) players = 1;
     ojh_sleep(0.05);
@@ -773,6 +1164,10 @@ static int sample_game(int argc, char **argv) {
         ojh_sleep(0.004 + 0.001 * players);
         if (plain) printf("Turn %d finished\n", t);
         else printf("OJH turn %d\n", t);
+        fflush(stdout);
+    }
+    if (footprint) {
+        printf("OJH save 4096 0.002000\nOJH load 0.001000\n");
         fflush(stdout);
     }
     return 0;
@@ -1009,6 +1404,215 @@ static int test_score(void) {
     if (failures) return 1;
     puts("score: ok (points, hardware adjustment, weights across turn speed, frame rate and network, partial coverage "
          "and provisional runs match hand-worked answers)");
+    return 0;
+}
+
+static int write_bytes(const char *path, size_t n) {
+    FILE *f = fopen(path, "wb");
+    if (!f) return -1;
+    for (size_t i = 0; i < n; i++) fputc('x', f);
+    return fclose(f);
+}
+
+static int test_footprint(void) {
+    int failures = 0;
+    const char *tmp = getenv("TMPDIR");
+    if (!tmp) tmp = getenv("TEMP");
+    if (!tmp) tmp = ".";
+    char root[1024], sub_dir[1100], git[1100], a[1200], b[1200], c[1200];
+    snprintf(root, sizeof root, "%s/ojh-footprint-selftest", tmp);
+    snprintf(sub_dir, sizeof sub_dir, "%s/sub", root);
+    snprintf(git, sizeof git, "%s/.git", root);
+    snprintf(a, sizeof a, "%s/a.txt", root);
+    snprintf(b, sizeof b, "%s/b.txt", sub_dir);
+    snprintf(c, sizeof c, "%s/c.txt", git);
+    ojh_make_dir(root);
+    ojh_make_dir(sub_dir);
+    ojh_make_dir(git);
+    if (write_bytes(a, 10) != 0 || write_bytes(b, 20) != 0 || write_bytes(c, 30) != 0) return 1;
+    const char *skip[] = {".git", NULL};
+    uint64_t bytes = 0, files = 0;
+    if (ojh_path_size(root, skip, &bytes, &files) != 0 || bytes != 30 || files != 2) {
+        fprintf(stderr, "footprint: the folder measured %llu bytes in %llu files, expected 30 in 2\n",
+                (unsigned long long)bytes, (unsigned long long)files);
+        failures++;
+    }
+    uint64_t missing_bytes = 0, missing_files = 0;
+    if (ojh_path_size("/no/such/ojh/path", NULL, &missing_bytes, &missing_files) == 0) {
+        fputs("footprint: a path that does not exist was measured\n", stderr);
+        failures++;
+    }
+
+    char spec_text[1600], error[1024] = "";
+    snprintf(spec_text, sizeof spec_text,
+             "{\"ojh_game_spec\": 1, \"id\": \"sample-footprint\", \"name\": \"Sample\", "
+             "\"command\": [\"{ojh}\", \"selftest\", \"sample-game\", \"{turns}\", \"{players}\"], "
+             "\"turns\": {\"from\": \"protocol\"}, \"install\": [\"a.txt\", \"sub\"], "
+             "\"footprint_command\": [\"{ojh}\", \"selftest\", \"sample-game\", \"3\", \"2\", \"footprint\"]}");
+    ojh_gamespec spec;
+    if (ojh_gamespec_parse(spec_text, strlen(spec_text), root, &spec, error, sizeof error) != 0) {
+        fprintf(stderr, "footprint: the spec was refused: %s\n", error);
+        failures++;
+    } else {
+        char self[1024];
+        ojh_tpm_options o;
+        memset(&o, 0, sizeof o);
+        o.turns = 3;
+        o.players = 2;
+        o.timeout_seconds = 60;
+        o.work_dir = root;
+        if (ojh_self_path(self, sizeof self) == 0) o.ojh_path = self;
+        ojh_footprint f;
+        int status = ojh_footprint_run_spec(&spec, &o, &f, error, sizeof error);
+        if (status != 0 || f.install_bytes != 30 || f.install_files != 2 || f.save_bytes != 4096 ||
+            !close_to(f.save_seconds, 0.002) || !close_to(f.load_seconds, 0.001)) {
+            fprintf(stderr, "footprint: the spec run gave status %d, install %llu bytes, save %llu bytes %.4f s, load %.4f s (%s)\n",
+                    status, (unsigned long long)f.install_bytes, (unsigned long long)f.save_bytes, f.save_seconds,
+                    f.load_seconds, error);
+            failures++;
+        }
+        ojh_gamespec_free(&spec);
+    }
+    remove(a);
+    remove(b);
+    remove(c);
+    if (failures) return 1;
+    puts("footprint: ok (folder sizes skip .git and refuse missing paths; a spec's install paths and its OJH save and "
+         "load lines are measured)");
+    return 0;
+}
+
+static int net_test_server(int argc, char **argv) {
+    if (argc < 6) return 2;
+    uint16_t port = (uint16_t)atoi(argv[3]);
+    int turns = atoi(argv[4]);
+    int clients = atoi(argv[5]);
+    uint16_t bound = 0;
+    ojh_socket listener = ojh_listen_loopback(port, &bound);
+    if (listener == OJH_INVALID_SOCKET) return 3;
+    printf("OJH ready\n");
+    fflush(stdout);
+    ojh_socket conns[OJH_NET_MAX_CLIENTS];
+    int n = 0;
+    double deadline = ojh_now() + 20;
+    while (n < clients && ojh_now() < deadline) {
+        int readable;
+        if (ojh_wait_readable(&listener, 1, 200, &readable) > 0 && readable) {
+            ojh_socket c = ojh_accept(listener);
+            if (c != OJH_INVALID_SOCKET) conns[n++] = c;
+        }
+    }
+    if (n < clients) return 4;
+    printf("OJH turn 0\n");
+    fflush(stdout);
+    uint8_t block[8192], ack[64];
+    memset(block, 't', sizeof block);
+    for (int turn = 1; turn <= turns; turn++) {
+        ojh_sleep(0.15);
+        size_t size = (size_t)turn * 1000;
+        for (int c = 0; c < n; c++) {
+            size_t sent = 0;
+            while (sent < size) {
+                size_t chunk = size - sent < sizeof block ? size - sent : sizeof block;
+                if (ojh_send_all(conns[c], block, chunk) != 0) return 5;
+                sent += chunk;
+            }
+        }
+        for (int c = 0; c < n; c++) {
+            long got = 0;
+            while (got < 10) {
+                long r = ojh_recv(conns[c], ack, sizeof ack);
+                if (r <= 0) return 6;
+                got += r;
+            }
+        }
+        printf("OJH turn %d\n", turn);
+        fflush(stdout);
+    }
+    ojh_sleep(0.3);
+    for (int c = 0; c < n; c++) ojh_sock_close(conns[c]);
+    ojh_sock_close(listener);
+    return 0;
+}
+
+static int net_test_client(int argc, char **argv) {
+    if (argc < 4) return 2;
+    ojh_socket s = ojh_connect_tcp("127.0.0.1", (uint16_t)atoi(argv[3]));
+    if (s == OJH_INVALID_SOCKET) return 3;
+    uint8_t buf[16384];
+    uint8_t ack[10];
+    memset(ack, 'a', sizeof ack);
+    int turn = 1;
+    long pending = 0;
+    for (;;) {
+        long r = ojh_recv(s, buf, sizeof buf);
+        if (r <= 0) break;
+        pending += r;
+        while (pending >= (long)turn * 1000) {
+            pending -= (long)turn * 1000;
+            if (ojh_send_all(s, ack, sizeof ack) != 0) break;
+            turn++;
+        }
+    }
+    ojh_sock_close(s);
+    return 0;
+}
+
+static int test_net(void) {
+    int failures = 0;
+    ojh_net_event events[] = {
+        {100.00, 1, 500}, {100.50, 0, 20},
+        {101.00, 1, 3000}, {101.04, 1, 1000}, {101.30, 0, 40},
+        {102.00, 1, 800}, {102.02, 1, 200}, {102.50, 1, 7},
+    };
+    double marks[] = {100.0, 101.0, 102.0, 103.0};
+    ojh_net n;
+    memset(&n, 0, sizeof n);
+    if (ojh_net_analyse(events, sizeof events / sizeof events[0], marks, 4, 2, 1, &n) != 0 || n.turns != 3 ||
+        n.dpt_lowest != 520 || n.dpt_highest != 4040 || n.dpt_median != 1007 || n.dpt_lowest_turn != 1 ||
+        n.dpt_highest_turn != 2 || !close_to(n.delivery_median, 0.04) || n.bytes[1] != 5507 || n.bytes[0] != 60 ||
+        !close_to(n.nipm_bytes_per_minute, 5567 / (3.0 / 60.0)) || n.busiest_second_bytes != 4040) {
+        fprintf(stderr, "net: analysis gave turns %d, dpt %llu/%llu/%llu (turns %d, %d), delivery %.4f, down %llu up %llu, "
+                        "nipm %.1f, busiest %llu\n", n.turns, (unsigned long long)n.dpt_lowest,
+                (unsigned long long)n.dpt_median, (unsigned long long)n.dpt_highest, n.dpt_lowest_turn, n.dpt_highest_turn,
+                n.delivery_median, (unsigned long long)n.bytes[1], (unsigned long long)n.bytes[0], n.nipm_bytes_per_minute,
+                (unsigned long long)n.busiest_second_bytes);
+        failures++;
+    }
+
+    char self[1024], port_text[16], turns_text[16] = "5", clients_text[16] = "2";
+    if (ojh_self_path(self, sizeof self) != 0) return 1;
+    uint16_t port = free_port();
+    snprintf(port_text, sizeof port_text, "%u", (unsigned)port);
+    const char *server[] = {self, "selftest", "net-server", port_text, turns_text, clients_text, NULL};
+    const char *client[] = {self, "selftest", "net-client", "{relay_port}", NULL};
+    ojh_net_plan plan;
+    memset(&plan, 0, sizeof plan);
+    plan.mode = OJH_NET_RELAY;
+    plan.server = server;
+    plan.server_port = port;
+    plan.ready_when = "OJH ready";
+    plan.client = client;
+    plan.clients = 2;
+    plan.turns_from_protocol = 1;
+    plan.turns = 5;
+    plan.timeout_seconds = 60;
+    plan.transport = "tcp";
+    ojh_net live;
+    memset(&live, 0, sizeof live);
+    char error[1024] = "";
+    int status = ojh_net_run(&plan, &live, error, sizeof error);
+    if (status != 0 || live.turns != 5 || live.bytes[1] != 30000 || live.bytes[0] != 100 || live.dpt_lowest != 2020 ||
+        live.dpt_highest != 10020 || live.dpt_lowest_turn != 1 || live.dpt_highest_turn != 5 || live.clients != 2) {
+        fprintf(stderr, "net: the relayed session gave status %d, turns %d, down %llu up %llu, dpt %llu..%llu (turns %d, %d): %s\n",
+                status, live.turns, (unsigned long long)live.bytes[1], (unsigned long long)live.bytes[0],
+                (unsigned long long)live.dpt_lowest, (unsigned long long)live.dpt_highest, live.dpt_lowest_turn,
+                live.dpt_highest_turn, error);
+        failures++;
+    }
+    if (failures) return 1;
+    puts("net: ok (data per turn, delivery, information per minute and the busiest second match hand-worked answers; a "
+         "real server and two clients measured through the relay, byte for byte)");
     return 0;
 }
 
@@ -1306,6 +1910,8 @@ int main(int argc, char **argv) {
     if (strcmp(argv[1], "tpm") == 0) return cmd_tpm(argc, argv);
     if (strcmp(argv[1], "report") == 0) return cmd_report(argc, argv);
     if (strcmp(argv[1], "score") == 0) return cmd_score(argc, argv);
+    if (strcmp(argv[1], "footprint") == 0) return cmd_footprint(argc, argv);
+    if (strcmp(argv[1], "net") == 0) return cmd_net(argc, argv);
     if (strcmp(argv[1], "spec") == 0) return cmd_spec(argc, argv);
     if (strcmp(argv[1], "selftest") == 0 && argc > 2) {
         if (strcmp(argv[2], "sha256") == 0) return test_sha256();
@@ -1319,6 +1925,10 @@ int main(int argc, char **argv) {
         if (strcmp(argv[2], "report") == 0) return test_report();
         if (strcmp(argv[2], "spec") == 0) return test_spec();
         if (strcmp(argv[2], "score") == 0) return test_score();
+        if (strcmp(argv[2], "footprint") == 0) return test_footprint();
+        if (strcmp(argv[2], "net") == 0) return test_net();
+        if (strcmp(argv[2], "net-server") == 0) return net_test_server(argc, argv);
+        if (strcmp(argv[2], "net-client") == 0) return net_test_client(argc, argv);
         if (strcmp(argv[2], "sample-game") == 0) return sample_game(argc, argv);
         if (strcmp(argv[2], "print-lines") == 0) return print_lines();
         if (strcmp(argv[2], "sleep-long") == 0) {

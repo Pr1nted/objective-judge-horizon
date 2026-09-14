@@ -65,6 +65,8 @@ int ojh_command_line(const char *const *argv, char *out, size_t cap);
 #endif
 int ojh_make_dir(const char *path);
 int ojh_list_dir(const char *dir, void (*fn)(const char *name, void *user), void *user);
+int ojh_path_size(const char *path, const char *const *skip_names, uint64_t *bytes, uint64_t *files);
+int ojh_resolve_program(const char *name, char *out, size_t n);
 int ojh_process_tree(ojh_pid root, ojh_pid *out, int max);
 int ojh_process_usage(ojh_pid pid, uint64_t *memory_bytes, uint64_t *cpu_ns);
 

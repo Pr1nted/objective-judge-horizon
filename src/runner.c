@@ -26,7 +26,12 @@ struct ojh_run {
 #ifdef _WIN32
     HANDLE process;
     HANDLE job;
+    HANDLE input;
+#else
+    int input;
 #endif
+    int reaped;
+    int status;
     double started;
     ojh_flag stop;
     ojh_flag done[2];
@@ -177,7 +182,7 @@ static int overridden(const char *entry, const char *const *env) {
 }
 
 #ifdef _WIN32
-ojh_run *ojh_run_start(const char *const *argv, const char *const *env, const char *cwd) {
+static ojh_run *start_run(const char *const *argv, const char *const *env, const char *cwd, int with_input) {
     char command[32768];
     if (ojh_command_line(argv, command, sizeof command) != 0) return NULL;
 
@@ -214,6 +219,8 @@ ojh_run *ojh_run_start(const char *const *argv, const char *const *env, const ch
     }
     SetHandleInformation(out_r, HANDLE_FLAG_INHERIT, 0);
     SetHandleInformation(err_r, HANDLE_FLAG_INHERIT, 0);
+    HANDLE in_r = NULL, in_w = NULL;
+    if (with_input && CreatePipe(&in_r, &in_w, &sa, 0)) SetHandleInformation(in_w, HANDLE_FLAG_INHERIT, 0);
     HANDLE nul = CreateFileA("NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, &sa, OPEN_EXISTING, 0, NULL);
 
     STARTUPINFOA si;
@@ -221,7 +228,7 @@ ojh_run *ojh_run_start(const char *const *argv, const char *const *env, const ch
     memset(&si, 0, sizeof si);
     si.cb = sizeof si;
     si.dwFlags = STARTF_USESTDHANDLES;
-    si.hStdInput = nul;
+    si.hStdInput = in_r ? in_r : nul;
     si.hStdOutput = out_w;
     si.hStdError = err_w;
 
@@ -239,8 +246,10 @@ ojh_run *ojh_run_start(const char *const *argv, const char *const *env, const ch
     free(block);
     CloseHandle(out_w);
     CloseHandle(err_w);
+    if (in_r) CloseHandle(in_r);
     if (nul != INVALID_HANDLE_VALUE) CloseHandle(nul);
     if (!ok) {
+        if (in_w) CloseHandle(in_w);
         CloseHandle(out_r);
         CloseHandle(err_r);
         ojh_mutex_destroy(&r->lock);
@@ -259,20 +268,22 @@ ojh_run *ojh_run_start(const char *const *argv, const char *const *env, const ch
     CloseHandle(pi.hThread);
     r->process = pi.hProcess;
     r->pid = pi.dwProcessId;
+    r->input = in_w;
     if (start_readers(r, out_r, err_r) != 0) {
         ojh_flag_exchange(&r->stop, 1);
     }
     return r;
 }
 #else
-ojh_run *ojh_run_start(const char *const *argv, const char *const *env, const char *cwd) {
-    int out[2] = {-1, -1}, err[2] = {-1, -1};
+static ojh_run *start_run(const char *const *argv, const char *const *env, const char *cwd, int with_input) {
+    int out[2] = {-1, -1}, err[2] = {-1, -1}, in[2] = {-1, -1};
     if (pipe(out) != 0) return NULL;
     if (pipe(err) != 0) {
         close(out[0]);
         close(out[1]);
         return NULL;
     }
+    if (with_input && pipe(in) != 0) in[0] = in[1] = -1;
     size_t base = 0, extra = 0;
     while (environ && environ[base]) base++;
     while (env && env[extra]) extra++;
@@ -309,10 +320,16 @@ ojh_run *ojh_run_start(const char *const *argv, const char *const *env, const ch
         dup2(out[1], STDOUT_FILENO);
         dup2(err[1], STDERR_FILENO);
         close(out[0]); close(out[1]); close(err[0]); close(err[1]);
-        int devnull = open("/dev/null", O_RDONLY);
-        if (devnull >= 0) {
-            dup2(devnull, STDIN_FILENO);
-            close(devnull);
+        if (in[0] >= 0) {
+            dup2(in[0], STDIN_FILENO);
+            close(in[0]);
+            close(in[1]);
+        } else {
+            int devnull = open("/dev/null", O_RDONLY);
+            if (devnull >= 0) {
+                dup2(devnull, STDIN_FILENO);
+                close(devnull);
+            }
         }
         if (cwd && chdir(cwd) != 0) _exit(126);
         environ = envp;
@@ -323,6 +340,9 @@ ojh_run *ojh_run_start(const char *const *argv, const char *const *env, const ch
     free(envp);
     close(out[1]);
     close(err[1]);
+    if (in[0] >= 0) close(in[0]);
+    if (in[1] >= 0) fcntl(in[1], F_SETFD, FD_CLOEXEC);
+    r->input = in[1];
     r->pid = pid;
     if (start_readers(r, out[0], err[0]) != 0) {
         ojh_flag_exchange(&r->stop, 1);
@@ -331,7 +351,95 @@ ojh_run *ojh_run_start(const char *const *argv, const char *const *env, const ch
 }
 #endif
 
+ojh_run *ojh_run_start(const char *const *argv, const char *const *env, const char *cwd) {
+    return start_run(argv, env, cwd, 0);
+}
+
+ojh_run *ojh_run_start_with_input(const char *const *argv, const char *const *env, const char *cwd) {
+    return start_run(argv, env, cwd, 1);
+}
+
 ojh_pid ojh_run_pid(const ojh_run *r) { return r->pid; }
+
+double ojh_run_started(const ojh_run *r) { return r->started; }
+
+int ojh_run_write(ojh_run *r, const char *text) {
+    size_t len = strlen(text);
+#ifdef _WIN32
+    if (!r->input) return -1;
+    while (len > 0) {
+        DWORD wrote = 0;
+        if (!WriteFile(r->input, text, (DWORD)len, &wrote, NULL)) return -1;
+        text += wrote;
+        len -= wrote;
+    }
+#else
+    if (r->input < 0) return -1;
+    while (len > 0) {
+        ssize_t n = write(r->input, text, len);
+        if (n < 0) {
+            if (errno == EINTR) continue;
+            return -1;
+        }
+        text += n;
+        len -= (size_t)n;
+    }
+#endif
+    return 0;
+}
+
+void ojh_run_close_input(ojh_run *r) {
+#ifdef _WIN32
+    if (r->input) {
+        CloseHandle(r->input);
+        r->input = NULL;
+    }
+#else
+    if (r->input >= 0) {
+        close(r->input);
+        r->input = -1;
+    }
+#endif
+}
+
+int ojh_run_running(ojh_run *r) {
+    if (r->waited) return 0;
+#ifdef _WIN32
+    return WaitForSingleObject(r->process, 0) == WAIT_TIMEOUT;
+#else
+    if (r->reaped) return 0;
+    int status;
+    pid_t w = waitpid(r->pid, &status, WNOHANG);
+    if (w == r->pid) {
+        r->reaped = 1;
+        r->status = status;
+        return 0;
+    }
+    return w == 0;
+#endif
+}
+
+int ojh_run_copy_line(const ojh_run *r, size_t index, char *out, size_t n, double *t, int *stream) {
+    ojh_run *m = (ojh_run *)r;
+    int found = 0;
+    ojh_mutex_lock(&m->lock);
+    if (index < m->count) {
+        snprintf(out, n, "%s", m->lines[index].text);
+        if (t) *t = m->lines[index].t;
+        if (stream) *stream = m->lines[index].stream;
+        found = 1;
+    }
+    ojh_mutex_unlock(&m->lock);
+    return found;
+}
+
+size_t ojh_run_line_count_now(const ojh_run *r) {
+    ojh_run *m = (ojh_run *)r;
+    ojh_mutex_lock(&m->lock);
+    size_t count = m->count;
+    ojh_mutex_unlock(&m->lock);
+    return count;
+}
 
 int ojh_run_wait(ojh_run *r, double timeout_seconds) {
     if (r->waited) return -1;
@@ -351,7 +459,8 @@ int ojh_run_wait(ojh_run *r, double timeout_seconds) {
     double deadline = ojh_now() + timeout_seconds;
     int status;
     for (;;) {
-        pid_t w = waitpid(r->pid, &status, WNOHANG);
+        pid_t w = r->reaped ? r->pid : waitpid(r->pid, &status, WNOHANG);
+        if (r->reaped) status = r->status;
         if (w == r->pid) {
             if (WIFEXITED(status)) code = WEXITSTATUS(status);
             else if (WIFSIGNALED(status)) code = 128 + WTERMSIG(status);
@@ -394,6 +503,7 @@ void ojh_run_free(ojh_run *r) {
     if (!r->waited) ojh_run_wait(r, 0.001);
     for (size_t i = 0; i < r->count; i++) free(r->lines[i].text);
     free(r->lines);
+    ojh_run_close_input(r);
 #ifdef _WIN32
     if (r->process) CloseHandle(r->process);
     if (r->job) CloseHandle(r->job);

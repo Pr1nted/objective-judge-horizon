@@ -7,6 +7,12 @@
 
 typedef struct ojh_relay ojh_relay;
 
+typedef struct {
+    double t;
+    int direction;
+    uint32_t bytes;
+} ojh_net_event;
+
 enum { OJH_UP = 0, OJH_DOWN = 1 };
 
 ojh_relay *ojh_relay_start(uint16_t listen_port, const char *target_host, uint16_t target_port);
@@ -25,5 +31,7 @@ int ojh_relay_dpt(const ojh_relay *r, ojh_dpt *out);
 
 void ojh_relay_json(ojh_json *w, const ojh_relay *r, int clients);
 void ojh_relay_free(ojh_relay *r);
+size_t ojh_relay_event_count(const ojh_relay *r);
+const ojh_net_event *ojh_relay_events(const ojh_relay *r);
 
 #endif

@@ -16,7 +16,14 @@ typedef struct {
 typedef struct ojh_run ojh_run;
 
 ojh_run *ojh_run_start(const char *const *argv, const char *const *env, const char *cwd);
+ojh_run *ojh_run_start_with_input(const char *const *argv, const char *const *env, const char *cwd);
 ojh_pid ojh_run_pid(const ojh_run *r);
+double ojh_run_started(const ojh_run *r);
+int ojh_run_write(ojh_run *r, const char *text);
+void ojh_run_close_input(ojh_run *r);
+int ojh_run_running(ojh_run *r);
+size_t ojh_run_line_count_now(const ojh_run *r);
+int ojh_run_copy_line(const ojh_run *r, size_t index, char *out, size_t n, double *t, int *stream);
 
 int ojh_run_wait(ojh_run *r, double timeout_seconds);
 

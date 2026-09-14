@@ -410,6 +410,100 @@ int ojh_list_dir(const char *dir, void (*fn)(const char *name, void *user), void
 #endif
 }
 
+static int skipped_name(const char *name, const char *const *skip) {
+    for (size_t k = 0; skip && skip[k]; k++) {
+        if (strcmp(name, skip[k]) == 0) return 1;
+    }
+    return 0;
+}
+
+int ojh_path_size(const char *path, const char *const *skip, uint64_t *bytes, uint64_t *files) {
+#ifdef _WIN32
+    WIN32_FILE_ATTRIBUTE_DATA info;
+    if (!GetFileAttributesExA(path, GetFileExInfoStandard, &info)) return -1;
+    if (!(info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+        *bytes += ((uint64_t)info.nFileSizeHigh << 32) | info.nFileSizeLow;
+        *files += 1;
+        return 0;
+    }
+    if (info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) return 0;
+    char pattern[4100];
+    snprintf(pattern, sizeof pattern, "%s\\*", path);
+    WIN32_FIND_DATAA data;
+    HANDLE h = FindFirstFileA(pattern, &data);
+    if (h == INVALID_HANDLE_VALUE) return 0;
+    do {
+        if (strcmp(data.cFileName, ".") == 0 || strcmp(data.cFileName, "..") == 0) continue;
+        if (skipped_name(data.cFileName, skip)) continue;
+        size_t n = strlen(path) + strlen(data.cFileName) + 2;
+        char *child = malloc(n);
+        if (!child) break;
+        snprintf(child, n, "%s\\%s", path, data.cFileName);
+        ojh_path_size(child, skip, bytes, files);
+        free(child);
+    } while (FindNextFileA(h, &data));
+    FindClose(h);
+    return 0;
+#else
+    struct stat st;
+    if (lstat(path, &st) != 0) return -1;
+    if (S_ISLNK(st.st_mode)) return 0;
+    if (!S_ISDIR(st.st_mode)) {
+        *bytes += (uint64_t)st.st_size;
+        *files += 1;
+        return 0;
+    }
+    DIR *d = opendir(path);
+    if (!d) return -1;
+    struct dirent *e;
+    while ((e = readdir(d))) {
+        if (strcmp(e->d_name, ".") == 0 || strcmp(e->d_name, "..") == 0) continue;
+        if (skipped_name(e->d_name, skip)) continue;
+        size_t n = strlen(path) + strlen(e->d_name) + 2;
+        char *child = malloc(n);
+        if (!child) break;
+        snprintf(child, n, "%s/%s", path, e->d_name);
+        ojh_path_size(child, skip, bytes, files);
+        free(child);
+    }
+    closedir(d);
+    return 0;
+#endif
+}
+
+int ojh_resolve_program(const char *name, char *out, size_t n) {
+#ifdef _WIN32
+    char found[MAX_PATH];
+    if (strchr(name, '\\') || strchr(name, '/')) {
+        if (!GetFullPathNameA(name, sizeof found, found, NULL)) return -1;
+    } else if (!SearchPathA(NULL, name, ".exe", sizeof found, found, NULL)) {
+        return -1;
+    }
+    snprintf(out, n, "%s", found);
+    return 0;
+#else
+    char candidate[4096];
+    if (strchr(name, '/')) {
+        snprintf(candidate, sizeof candidate, "%s", name);
+    } else {
+        const char *path = getenv("PATH");
+        int hit = 0;
+        while (path && *path && !hit) {
+            const char *end = strchr(path, ':');
+            size_t len = end ? (size_t)(end - path) : strlen(path);
+            snprintf(candidate, sizeof candidate, "%.*s/%s", (int)len, path, name);
+            if (access(candidate, X_OK) == 0) hit = 1;
+            path = end ? end + 1 : NULL;
+        }
+        if (!hit) return -1;
+    }
+    char real[4096];
+    if (!realpath(candidate, real)) return -1;
+    snprintf(out, n, "%s", real);
+    return 0;
+#endif
+}
+
 int ojh_process_tree(ojh_pid root, ojh_pid *out, int max) {
     if (max < 1) return 0;
 #ifdef _WIN32

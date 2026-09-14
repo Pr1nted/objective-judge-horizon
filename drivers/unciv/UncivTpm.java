@@ -3,6 +3,7 @@ import com.badlogic.gdx.backends.headless.HeadlessFiles;
 import com.unciv.UncivGame;
 import com.unciv.logic.GameInfo;
 import com.unciv.logic.GameStarter;
+import com.unciv.logic.files.UncivFiles;
 import com.unciv.logic.civilization.Civilization;
 import com.unciv.logic.civilization.PlayerType;
 import com.unciv.logic.map.MapParameters;
@@ -17,6 +18,7 @@ import com.unciv.models.ruleset.RulesetCache;
 import com.unciv.models.ruleset.nation.Nation;
 
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Locale;
 
@@ -25,6 +27,8 @@ public final class UncivTpm {
         int civs = args.length > 0 ? Integer.parseInt(args[0]) : 8;
         int turns = args.length > 1 ? Integer.parseInt(args[1]) : 100;
         String size = args.length > 2 ? args[2] : "small";
+        boolean footprint = args.length > 3 && args[3].equals("footprint");
+        boolean net = args.length > 3 && args[3].equals("net");
 
         long bootStart = System.nanoTime();
         UncivGame game = new UncivGame(true);
@@ -103,6 +107,21 @@ public final class UncivTpm {
             }
             System.out.printf(Locale.ROOT, "{\"turn\": %d, \"seconds\": %.6f, \"game_turn\": %d, \"major_civs_alive\": %d, \"cities\": %d}%n",
                     i + 1, seconds, info.getTurns(), alive, cities);
+            if (net) {
+                int upload = UncivFiles.Companion.gameInfoToString(info, Boolean.TRUE, false).getBytes(StandardCharsets.UTF_8).length;
+                System.out.printf(Locale.ROOT, "OJH data %d %d%n", upload, upload);
+                System.out.printf(Locale.ROOT, "OJH turn %d%n", i + 1);
+            }
+        }
+        if (footprint) {
+            long saveStart = System.nanoTime();
+            String saved = UncivFiles.Companion.gameInfoToString(info, Boolean.TRUE, false);
+            double saveSeconds = (System.nanoTime() - saveStart) / 1e9;
+            long loadStart = System.nanoTime();
+            UncivFiles.Companion.gameInfoFromString(saved);
+            double loadSeconds = (System.nanoTime() - loadStart) / 1e9;
+            System.out.printf(Locale.ROOT, "OJH save %d %.6f%n", saved.getBytes(StandardCharsets.UTF_8).length, saveSeconds);
+            System.out.printf(Locale.ROOT, "OJH load %.6f%n", loadSeconds);
         }
         int tiles = info.getTileMap().getValues().size();
         System.out.printf(Locale.ROOT, "{\"summary\": {\"game\": \"Unciv\", \"ruleset\": \"%s\", \"civs\": %d, \"map_size\": \"%s\", \"tiles\": %d, "

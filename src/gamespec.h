@@ -32,6 +32,21 @@ typedef struct {
     int default_turns;
     double timeout_seconds;
     int players_chosen;
+    char **install;
+    int install_count;
+    char **footprint_command;
+    int footprint_count;
+    int has_network;
+    char **net_server;
+    int net_server_count;
+    char **net_client;
+    int net_client_count;
+    char **net_after_connect;
+    int net_after_connect_count;
+    char *net_ready_when;
+    char *net_connected_when;
+    int net_server_port;
+    int net_clients;
 } ojh_gamespec;
 
 typedef struct {

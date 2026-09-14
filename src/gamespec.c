@@ -11,10 +11,11 @@
 
 static const char *const TOP_KEYS[] = {"ojh_game_spec", "id", "name", "version", "license", "homepage", "notes",
                                        "command", "working_directory", "environment", "turns", "players",
-                                       "regions", "region_kind", "default_turns", "timeout_seconds"};
+                                       "regions", "region_kind", "default_turns", "timeout_seconds",
+                                       "install", "footprint_command", "network"};
 static const char *const TURN_KEYS[] = {"from", "turn_ends", "game_starts", "stream", "players_after",
                                         "regions_after"};
-static const char *const PLACEHOLDERS[] = {"turns", "seed", "players", "work", "spec_dir", "ojh"};
+static const char *const PLACEHOLDERS[] = {"turns", "seed", "players", "work", "spec_dir", "ojh", "server_port", "relay_port", "client"};
 
 #define COUNT(a) (sizeof a / sizeof a[0])
 
@@ -68,7 +69,7 @@ static int template_string(const ojh_jvalue *v, const char *where, char **out, c
     if (check_placeholders(v->string, bad, sizeof bad) != 0) {
         return fail(error, error_len,
                     "%s has %s, which OJH does not fill in (it fills in {turns}, {seed}, {players}, {work}, "
-                    "{spec_dir} and {ojh})", where, bad);
+                    "{spec_dir}, {ojh}, and in network commands {server_port}, {relay_port} and {client})", where, bad);
     }
     *out = dup_string(v->string);
     return *out ? 0 : fail(error, error_len, "out of memory");
@@ -140,6 +141,80 @@ static int read_turns(const ojh_jvalue *turns, ojh_gamespec *s, char *error, siz
         else if (strcmp(name, "either") == 0) s->stream = OJH_STREAM_EITHER;
         else return fail(error, error_len, "\"turns\".\"stream\" must be \"stdout\", \"stderr\" or \"either\"");
     }
+    return 0;
+}
+
+static int string_list(const ojh_jvalue *list, const char *key, int templates, char ***out, int *count, char *error,
+                       size_t error_len) {
+    if (!ojh_jpresent(list)) return 0;
+    if (list->type != OJH_JARRAY || list->count == 0) return fail(error, error_len, "\"%s\" must be a list of strings", key);
+    *out = calloc(list->count, sizeof **out);
+    if (!*out) return fail(error, error_len, "out of memory");
+    for (size_t i = 0; i < list->count; i++) {
+        char where[64];
+        snprintf(where, sizeof where, "\"%s\" item %lu", key, (unsigned long)(i + 1));
+        if (templates) {
+            if (template_string(&list->items[i], where, &(*out)[i], error, error_len) != 0) return -1;
+        } else {
+            if (list->items[i].type != OJH_JSTRING || !*list->items[i].string) {
+                return fail(error, error_len, "%s must be a non-empty string", where);
+            }
+            (*out)[i] = dup_string(list->items[i].string);
+            if (!(*out)[i]) return fail(error, error_len, "out of memory");
+        }
+        (*count)++;
+    }
+    return 0;
+}
+
+static const char *const NETWORK_KEYS[] = {"server", "server_port", "ready_when", "client", "clients", "connected_when",
+                                           "after_connect"};
+
+static int read_network(const ojh_jvalue *net, ojh_gamespec *s, char *error, size_t error_len) {
+    if (!ojh_jpresent(net)) return 0;
+    if (net->type != OJH_JOBJECT) return fail(error, error_len, "\"network\" must be an object");
+    for (size_t i = 0; i < net->count; i++) {
+        if (!in_list(net->items[i].key, NETWORK_KEYS, COUNT(NETWORK_KEYS))) {
+            return fail(error, error_len,
+                        "\"network\" has an unknown key \"%s\" (it can have server, server_port, ready_when, client, "
+                        "clients, connected_when and after_connect)", net->items[i].key);
+        }
+    }
+    if (string_list(ojh_jget(net, "server"), "network.server", 1, &s->net_server, &s->net_server_count, error, error_len) != 0 ||
+        string_list(ojh_jget(net, "client"), "network.client", 1, &s->net_client, &s->net_client_count, error, error_len) != 0 ||
+        string_list(ojh_jget(net, "after_connect"), "network.after_connect", 1, &s->net_after_connect,
+                    &s->net_after_connect_count, error, error_len) != 0) {
+        return -1;
+    }
+    if (!s->net_server || !s->net_client) {
+        return fail(error, error_len, "\"network\" needs \"server\" and \"client\" commands");
+    }
+    double number;
+    if (whole_number(ojh_jget(net, "server_port"), 1, &number) != 0 || number > 65535) {
+        return fail(error, error_len, "\"network\".\"server_port\" must be the port the game server listens on");
+    }
+    s->net_server_port = (int)number;
+    s->net_clients = 2;
+    const ojh_jvalue *clients = ojh_jget(net, "clients");
+    if (ojh_jpresent(clients)) {
+        if (whole_number(clients, 1, &number) != 0 || number > 16) {
+            return fail(error, error_len, "\"network\".\"clients\" must be a whole number from 1 to 16");
+        }
+        s->net_clients = (int)number;
+    }
+    const ojh_jvalue *ready = ojh_jget(net, "ready_when");
+    if (ojh_jpresent(ready)) {
+        if (ready->type != OJH_JSTRING || !*ready->string) return fail(error, error_len, "\"network\".\"ready_when\" must be text");
+        s->net_ready_when = dup_string(ready->string);
+    }
+    const ojh_jvalue *connected = ojh_jget(net, "connected_when");
+    if (ojh_jpresent(connected)) {
+        if (connected->type != OJH_JSTRING || !*connected->string) {
+            return fail(error, error_len, "\"network\".\"connected_when\" must be text");
+        }
+        s->net_connected_when = dup_string(connected->string);
+    }
+    s->has_network = 1;
     return 0;
 }
 
@@ -237,6 +312,12 @@ static int read_spec(const ojh_jvalue *root, ojh_gamespec *s, char *error, size_
     }
 
     if (read_turns(ojh_jget(root, "turns"), s, error, error_len) != 0) return -1;
+    if (string_list(ojh_jget(root, "install"), "install", 0, &s->install, &s->install_count, error, error_len) != 0 ||
+        string_list(ojh_jget(root, "footprint_command"), "footprint_command", 1, &s->footprint_command,
+                    &s->footprint_count, error, error_len) != 0) {
+        return -1;
+    }
+    if (read_network(ojh_jget(root, "network"), s, error, error_len) != 0) return -1;
 
     double number;
     const ojh_jvalue *players = ojh_jget(root, "players");
@@ -451,6 +532,24 @@ void ojh_gamespec_free(ojh_gamespec *s) {
     free(s->game_starts);
     free(s->players_after);
     free(s->regions_after);
+    for (int i = 0; i < s->install_count; i++) free(s->install[i]);
+    for (int i = 0; i < s->footprint_count; i++) free(s->footprint_command[i]);
+    free(s->install);
+    free(s->footprint_command);
+    s->install = s->footprint_command = NULL;
+    for (int i = 0; i < s->net_server_count; i++) free(s->net_server[i]);
+    for (int i = 0; i < s->net_client_count; i++) free(s->net_client[i]);
+    for (int i = 0; i < s->net_after_connect_count; i++) free(s->net_after_connect[i]);
+    free(s->net_server);
+    free(s->net_client);
+    free(s->net_after_connect);
+    free(s->net_ready_when);
+    free(s->net_connected_when);
+    s->net_server = s->net_client = s->net_after_connect = NULL;
+    s->net_ready_when = s->net_connected_when = NULL;
+    s->net_server_count = s->net_client_count = s->net_after_connect_count = 0;
+    s->has_network = 0;
+    s->install_count = s->footprint_count = 0;
     s->command = s->environment = NULL;
     s->working_directory = s->turn_ends = s->game_starts = s->players_after = s->regions_after = NULL;
     s->command_count = s->environment_count = 0;

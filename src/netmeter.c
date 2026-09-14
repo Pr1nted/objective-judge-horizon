@@ -34,6 +34,8 @@ struct ojh_relay {
     size_t mark_count, mark_cap;
     ojh_thread *pumps;
     size_t pump_count, pump_cap;
+    ojh_net_event *events;
+    size_t event_count, event_cap;
 };
 
 typedef struct {
@@ -59,6 +61,18 @@ static void record(ojh_relay *r, int direction, size_t n) {
         }
     }
     if (index < r->bucket_count[direction]) r->buckets[direction][index] += n;
+    if (r->event_count == r->event_cap) {
+        size_t cap = r->event_cap ? r->event_cap * 2 : 4096;
+        ojh_net_event *grown = realloc(r->events, cap * sizeof *grown);
+        if (grown) {
+            r->events = grown;
+            r->event_cap = cap;
+        }
+    }
+    if (r->event_count < r->event_cap) {
+        ojh_net_event e = {r->t0 + now, direction, n > 0xFFFFFFFFu ? 0xFFFFFFFFu : (uint32_t)n};
+        r->events[r->event_count++] = e;
+    }
     ojh_mutex_unlock(&r->lock);
 }
 
@@ -308,6 +322,7 @@ void ojh_relay_json(ojh_json *w, const ojh_relay *r, int clients) {
 
 void ojh_relay_free(ojh_relay *r) {
     if (!r) return;
+    free(r->events);
     ojh_relay_stop(r);
     free(r->buckets[0]);
     free(r->buckets[1]);
@@ -316,3 +331,7 @@ void ojh_relay_free(ojh_relay *r) {
     ojh_mutex_destroy(&r->lock);
     free(r);
 }
+
+size_t ojh_relay_event_count(const ojh_relay *r) { return r ? r->event_count : 0; }
+
+const ojh_net_event *ojh_relay_events(const ojh_relay *r) { return r ? r->events : NULL; }

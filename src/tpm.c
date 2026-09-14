@@ -295,8 +295,11 @@ static int run_and_parse(ojh_game game, const ojh_gamespec *spec, const char *co
     double t0 = ojh_now();
     ojh_run *r = ojh_run_start(argv, env, cwd);
     if (!r) return fail(error, error_len, "the program did not start (is the path right?)");
+    /* Sampled from outside, over the game and every process it starts, ten times a second. */
+    ojh_procmeter *meter = ojh_procmeter_start(ojh_run_pid(r), 0.1);
     int code = ojh_run_wait(r, timeout);
     double wall = ojh_now() - t0;
+    ojh_procmeter_stop(meter);
     size_t count = ojh_run_line_count(r);
     ojh_line *lines = calloc(count ? count : 1, sizeof *lines);
     if (!lines) {
@@ -307,6 +310,15 @@ static int run_and_parse(ojh_game game, const ojh_gamespec *spec, const char *co
     int parsed = spec ? ojh_tpm_parse_spec(spec, lines, count, out) : ojh_tpm_parse(game, lines, count, out);
     out->exit_code = code;
     out->wall_seconds = wall;
+    if (meter && ojh_procmeter_summarise(meter, 0, -1, &out->run_resources) > 0) {
+        out->has_resources = 1;
+        /* The turns ran from the end of start-up until start-up plus the time they took. When
+           start-up is unknown, the whole run stands in. */
+        double from = out->boot_seconds >= 0 ? out->boot_seconds : 0;
+        double to = out->boot_seconds >= 0 && out->play_seconds > 0 ? out->boot_seconds + out->play_seconds : -1;
+        if (ojh_procmeter_summarise(meter, from, to, &out->turn_resources) == 0) out->turn_resources = out->run_resources;
+    }
+    ojh_procmeter_free(meter);
     if (parsed != 0 && error && error_len) {
         /* The last few lines usually say why. */
         size_t at = 0;
@@ -559,6 +571,41 @@ void ojh_tpm_json(ojh_json *w, const ojh_tpm *t) {
             }
             free(sorted);
         }
+        ojh_json_end_object(w);
+    } else {
+        ojh_json_null(w);
+    }
+    ojh_json_key(w, "turn_series_seconds");
+    if (t->timed_turns > 1) {
+        /* At most 400 points: a long run is averaged into that many equal slices. */
+        int points = t->timed_turns < 400 ? t->timed_turns : 400;
+        ojh_json_array(w);
+        for (int p = 0; p < points; p++) {
+            int from = (int)((long long)p * t->timed_turns / points);
+            int to = (int)((long long)(p + 1) * t->timed_turns / points);
+            double sum = 0;
+            for (int i = from; i < to; i++) sum += t->turn_seconds[i];
+            ojh_json_double(w, to > from ? sum / (to - from) : 0, 5);
+        }
+        ojh_json_end_array(w);
+    } else {
+        ojh_json_null(w);
+    }
+    ojh_json_key(w, "resources");
+    if (t->has_resources) {
+        const ojh_procmeter_summary *run = &t->run_resources, *turn = &t->turn_resources;
+        ojh_json_object(w);
+        ojh_json_key(w, "samples"); ojh_json_int(w, run->samples);
+        ojh_json_key(w, "peak_memory_bytes"); ojh_json_uint(w, run->peak_memory_bytes);
+        ojh_json_key(w, "median_memory_bytes"); ojh_json_uint(w, turn->median_memory_bytes);
+        ojh_json_key(w, "cpu_seconds"); ojh_json_double(w, run->cpu_seconds, 3);
+        ojh_json_key(w, "turn_cpu_seconds"); ojh_json_double(w, turn->cpu_seconds, 3);
+        ojh_json_key(w, "cpu_seconds_per_turn");
+        if (t->turns > 0 && turn->samples > 1) ojh_json_double(w, turn->cpu_seconds / t->turns, 5);
+        else ojh_json_null(w);
+        ojh_json_key(w, "median_cores"); ojh_json_double(w, turn->median_cpu_percent / 100.0, 2);
+        ojh_json_key(w, "p95_cores"); ojh_json_double(w, turn->p95_cpu_percent / 100.0, 2);
+        ojh_json_key(w, "max_processes"); ojh_json_int(w, run->max_processes);
         ojh_json_end_object(w);
     } else {
         ojh_json_null(w);

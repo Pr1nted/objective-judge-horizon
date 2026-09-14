@@ -17,6 +17,7 @@
 #include "report.h"
 #include "runner.h"
 #include "score.h"
+#include "stats.h"
 #include "sha256.h"
 #include "tpm.h"
 
@@ -240,39 +241,51 @@ static int cmd_report(int argc, char **argv) {
 
 static int cmd_score(int argc, char **argv) {
     const char *out_dir = NULL;
-    int files = 0, failures = 0;
+    const char *paths[64];
+    int count = 0, failures = 0;
     for (int i = 2; i < argc; i++) {
         if (strcmp(argv[i], "--out") == 0) {
             if (i + 1 >= argc) return usage();
             out_dir = argv[++i];
-        } else {
-            files++;
+        } else if (count < 64) {
+            paths[count++] = argv[i];
         }
     }
-    if (files == 0) return usage();
+    if (count == 0) return usage();
     if (out_dir) ojh_make_dir(out_dir);
-    ojh_json w;
-    ojh_json_init(&w, stdout);
-    ojh_json_array(&w);
-    for (int i = 2; i < argc; i++) {
-        if (strcmp(argv[i], "--out") == 0) {
-            i++;
-            continue;
-        }
-        char error[1024] = "", folder[4096], written[128];
-        ojh_jvalue *root = ojh_jparse_file(argv[i], error, sizeof error);
-        ojh_score s;
-        if (!root || ojh_score_result(root, &s) != 0) {
-            fprintf(stderr, "score: %s is not a result OJH can score%s%s\n", argv[i], *error ? ": " : "", error);
-            if (root) ojh_jfree(root);
+
+    /* Every file read, grouped by the game it measured: one score and scorecard per game. */
+    ojh_jvalue *roots[64];
+    int loaded = 0;
+    const char *loaded_paths[64];
+    for (int i = 0; i < count; i++) {
+        char error[512];
+        roots[loaded] = ojh_jparse_file(paths[i], error, sizeof error);
+        if (!roots[loaded]) {
+            fprintf(stderr, "score: cannot read %s: %s\n", paths[i], error);
             failures++;
             continue;
         }
-        ojh_jfree(root);
+        loaded_paths[loaded++] = paths[i];
+    }
+    ojh_game_results games[64];
+    int game_count = ojh_group_results((const ojh_jvalue *const *)roots, loaded_paths, loaded, games, 64);
+    ojh_json w;
+    ojh_json_init(&w, stdout);
+    ojh_json_array(&w);
+    for (int g = 0; g < game_count; g++) {
+        ojh_score s;
+        if (ojh_score_game(&games[g], &s) != 0) continue;
         ojh_score_json(&w, &s);
-        folder_of(folder, sizeof folder, argv[i]);
+        const char *files[OJH_METRIC_COUNT];
+        int n = 0;
+        for (int m = 0; m < OJH_METRIC_COUNT; m++) {
+            if (games[g].file[m]) files[n++] = games[g].file[m];
+        }
+        char folder[4096], written[128], error[1024];
+        folder_of(folder, sizeof folder, files[0]);
         const char *dir = out_dir ? out_dir : folder;
-        if (ojh_scorecard_write(argv[i], dir, written, sizeof written, error, sizeof error) != 0) {
+        if (ojh_scorecard_write(files, n, dir, written, sizeof written, error, sizeof error) != 0) {
             fprintf(stderr, "score: %s\n", error);
             failures++;
             continue;
@@ -281,6 +294,11 @@ static int cmd_score(int argc, char **argv) {
                 s.provisional ? "provisional" : "final", s.coverage * 100, dir, written);
     }
     ojh_json_end_array(&w);
+    for (int i = 0; i < loaded; i++) ojh_jfree(roots[i]);
+    if (game_count == 0) {
+        fputs("score: none of these files is an OJH result\n", stderr);
+        failures++;
+    }
     return failures ? 1 : 0;
 }
 
@@ -402,6 +420,18 @@ static void points_text(char *out, size_t n, double total) {
     else snprintf(out, n, "%ld", v);
 }
 
+static void remove_graph(const char *name, void *user) {
+    char path[1400];
+    snprintf(path, sizeof path, "%s/%s", (const char *)user, name);
+    remove(path);
+}
+
+static void remove_graphs(const char *dir) {
+    char graphs[1200];
+    snprintf(graphs, sizeof graphs, "%s/graphs", dir);
+    ojh_list_dir(graphs, remove_graph, graphs);
+}
+
 /* Freeciv's scorecard shows the score of its own file, and stays byte-for-byte the same
    when Open Doctrines leaves the folder. */
 static int check_scorecards(const char *dir, const char *freeciv_path, const char *od_path) {
@@ -420,7 +450,7 @@ static int check_scorecards(const char *dir, const char *freeciv_path, const cha
     if (alone && ojh_score_result(alone, &s) == 0) points_text(expected, sizeof expected, s.total);
     if (alone) ojh_jfree(alone);
     snprintf(bold, sizeof bold, "**%s points**", expected);
-    if (!card || !strstr(card, bold) || !strstr(card, "| Turn throughput | 40% |") || !strstr(card, "## Why it is provisional")) {
+    if (!card || !strstr(card, bold) || !strstr(card, "| Turn throughput | ojh tpm | 22% |") || !strstr(card, "## Why it is provisional")) {
         fprintf(stderr, "report: score-freeciv.md is missing, or does not show %s from Freeciv's own file\n", bold);
         failures++;
     }
@@ -432,7 +462,7 @@ static int check_scorecards(const char *dir, const char *freeciv_path, const cha
         fputs("report: score-freeciv.svg is missing or lacks the score\n", stderr);
         failures++;
     }
-    if (!od || !strstr(od, "not reported") || !strstr(od, "50% of the weight")) {
+    if (!od || !strstr(od, "not measured") || !strstr(od, "27% of the weight")) {
         fputs("report: Open Doctrines' scorecard does not say which parts it lacks\n", stderr);
         failures++;
     }
@@ -518,7 +548,16 @@ static int test_report(void) {
     char error[1024] = "";
     int status = ojh_report_write(dir, error, sizeof error);
     char *md = read_all(md_path), *txt = read_all(txt_path);
-    int card_failures = check_scorecards(dir, freeciv_path, od_path);
+    char tpm_graph[1200];
+    snprintf(tpm_graph, sizeof tpm_graph, "%s/graphs/tpm.svg", dir);
+    char *graph = read_all(tpm_graph);
+    const char *od_bar = graph ? strstr(graph, ">Open Doctrines<") : NULL;
+    const char *freeciv_bar = graph ? strstr(graph, ">Freeciv<") : NULL;
+    int graph_failures = !(od_bar && freeciv_bar && od_bar < freeciv_bar && strstr(graph, "<svg"));
+    if (graph_failures) fputs("report: graphs/tpm.svg is missing or does not draw the best game first\n", stderr);
+    free(graph);
+    int card_failures = check_scorecards(dir, freeciv_path, od_path) + graph_failures;
+    remove_graphs(dir);
     remove(freeciv_path);
     remove(od_path);
     remove(md_path);
@@ -529,14 +568,18 @@ static int test_report(void) {
         free(txt);
         return 1;
     }
-    const char *md_needs[] = {"# Objective Judge Horizon (OJH) report", "| Apple M1 Pro |", "| Freeciv | 99 | 237.7 |",
-                              "| Open Doctrines | 500 | 967.7 |", "| 2,592 tiles |", "0.060 → 0.420",
+    const char *md_needs[] = {"# Objective Judge Horizon (OJH) report", "## At a glance",
+                              "## What went best and what went worst", "| Apple M1 Pro |",
+                              "| Turns per minute | more | Open Doctrines, 967.7 turns/min | Freeciv, 237.7 turns/min |",
+                              "| Open Doctrines | 967.7 turns/min (1st) |", "| Freeciv | 237.7 turns/min (2nd) |",
+                              "| 2,592 |", "7.00x", "![Turns per minute, best first](graphs/tpm.svg)",
                               "The runs timed different numbers of turns (99 to 500)", "Player counts differ (8 to 37)",
-                              "n/a for TPM × regions", "**Freeciv**: gaps between", "8 players, chosen by OJH",
-                              "players as the game's own scenario or world sets them",
-                              "## OJH scores", "| score-freeciv.md |", "| provisional |"};
-    const char *txt_needs[] = {"Objective Judge Horizon (OJH) report\n====", "Freeciv", "237.7", "967.7", "2,592 tiles",
-                               "  - Freeciv: gaps between"};
+                              "n/a for region-turns per minute", "**Freeciv**: gaps between", "8 players, chosen by OJH",
+                              "players as the game's own scenario or world sets them", "## OJH scores",
+                              "| score-freeciv.md |", "| provisional |", "## Frame rate", "## Not measured yet",
+                              "`ojh fps freeciv`"};
+    const char *txt_needs[] = {"Objective Judge Horizon (OJH) report\n====", "Freeciv", "237.7", "967.7", "2,592",
+                               "  - Freeciv: gaps between", "Turns per minute\n  Open Doctrines"};
     int failures = 0;
     for (size_t i = 0; i < sizeof md_needs / sizeof md_needs[0]; i++) {
         if (!strstr(md, md_needs[i])) {
@@ -885,66 +928,115 @@ static int test_spec(void) {
     return 0;
 }
 
-static void score_doc(char *out, size_t n, double tpm, const char *regions, int turns, const char *reference,
-                      const char *error) {
+/* A TPM result with every figure a score part reads. Measured on a CPU twice the
+   reference's speed, so CPU-bound figures are halved or doubled on the way to the score. */
+static void score_tpm_doc(char *out, size_t n, double player_turns, const char *region_turns, int turns,
+                          const char *reference, const char *error) {
     snprintf(out, n,
              "{\"metric\": \"tpm\", \"machine\": {\"reference\": %s}, \"result\": {\"game\": \"g\", \"name\": \"G\", "
-             "\"turns\": %d, \"tpm\": %.2f, \"players\": 40, \"regions\": %s, \"boot_seconds\": 5, \"per_turn\": "
-             "{\"median_seconds\": 0.2, \"p95_seconds\": 0.4, \"early_median_seconds\": 0.1, \"late_median_seconds\": 0.2}}, "
-             "\"error\": %s}", reference, turns, tpm, regions, error);
+             "\"turns\": %d, \"tpm\": 100, \"players\": 40, \"tpm_x_players\": %.2f, \"tpm_x_regions\": %s, "
+             "\"boot_seconds\": 5, \"per_turn\": {\"median_seconds\": 0.2, \"p95_seconds\": 0.4, "
+             "\"early_median_seconds\": 0.1, \"late_median_seconds\": 0.2}, "
+             "\"resources\": {\"peak_memory_bytes\": 2147483648, \"cpu_seconds_per_turn\": 0.2}}, \"error\": %s}",
+             reference, turns, player_turns, region_turns, error);
 }
 
-static int score_of(const char *doc, ojh_score *s) {
+static const char SCORE_FPS_DOC[] =
+    "{\"metric\": \"fps\", \"machine\": {\"reference\": {\"single_core_rounds_per_second\": 2000}}, "
+    "\"result\": {\"game\": \"g\", \"name\": \"G\", \"map_average_fps\": 60, \"one_percent_low_fps\": 30}, \"error\": null}";
+static const char SCORE_NET_DOC[] =
+    "{\"metric\": \"net\", \"machine\": {\"reference\": {\"single_core_rounds_per_second\": 2000}}, "
+    "\"result\": {\"game\": \"g\", \"name\": \"G\", \"players\": 40, \"dpt\": {\"highest_bytes\": 262144}, "
+    "\"delivery\": {\"median_seconds\": 0.05}}, \"error\": null}";
+
+/* Scores a game from the documents given (NULL ones skipped). */
+static int score_of_docs(const char *const *docs, int count, ojh_score *s) {
     char error[256];
-    ojh_jvalue *root = ojh_jparse(doc, strlen(doc), error, sizeof error);
-    int status = root ? ojh_score_result(root, s) : -1;
-    if (root) ojh_jfree(root);
+    ojh_jvalue *roots[4];
+    int n = 0;
+    for (int i = 0; i < count && n < 4; i++) {
+        if (!docs[i]) continue;
+        roots[n] = ojh_jparse(docs[i], strlen(docs[i]), error, sizeof error);
+        if (!roots[n]) {
+            fprintf(stderr, "score: a test document did not parse: %s\n", error);
+            for (int k = 0; k < n; k++) ojh_jfree(roots[k]);
+            return -1;
+        }
+        n++;
+    }
+    ojh_game_results games[1];
+    int status = ojh_group_results((const ojh_jvalue *const *)roots, NULL, n, games, 1) == 1 ? ojh_score_game(&games[0], s) : -1;
+    for (int k = 0; k < n; k++) ojh_jfree(roots[k]);
     return status;
+}
+
+static void print_parts(const ojh_score *s) {
+    for (int i = 0; i < s->part_count; i++) {
+        fprintf(stderr, "  %s %s %.3f\n", s->parts[i].key, s->parts[i].present ? "present" : "absent", s->parts[i].points);
+    }
 }
 
 /* The score against hand-worked answers. */
 static int test_score(void) {
     int failures = 0;
-    char doc[1024];
+    char doc[2048];
     ojh_score s;
     if (!close_to(ojh_score_points(1, 1), 1000) || !close_to(ojh_score_points(7, 1), 3000) || ojh_score_points(0, 1) != 0) {
         fputs("score: points are not 1000 x log2(1 + value / reference)\n", stderr);
         failures++;
     }
+    const char *reference = "{\"single_core_rounds_per_second\": 2000}";
 
-    /* Every part exactly at its reference level, measured on a CPU twice the reference's speed. */
-    score_doc(doc, sizeof doc, 100, "4000", 100, "{\"single_core_rounds_per_second\": 2000}", "null");
-    if (score_of(doc, &s) != 0 || !close_to(s.total, 1000) || !close_to(s.coverage, 1) || s.provisional || s.reason_count) {
-        fprintf(stderr, "score: parts at their reference levels gave %.3f, coverage %.2f, provisional %d:", s.total,
-                s.coverage, s.provisional);
-        for (int i = 0; i < s.part_count; i++) fprintf(stderr, " %s %.3f", s.parts[i].key, s.parts[i].points);
-        fputc('\n', stderr);
+    /* Every part of every measurement exactly at its reference level on the reference CPU. */
+    score_tpm_doc(doc, sizeof doc, 4000, "400000", 100, reference, "null");
+    const char *all[] = {doc, SCORE_FPS_DOC, SCORE_NET_DOC};
+    if (score_of_docs(all, 3, &s) != 0 || !close_to(s.total, 1000) || !close_to(s.coverage, 1) || s.provisional ||
+        s.reason_count) {
+        fprintf(stderr, "score: every part at its reference gave %.3f, coverage %.2f, provisional %d, notes %d\n", s.total,
+                s.coverage, s.provisional, s.reason_count);
+        print_parts(&s);
         failures++;
     }
 
-    /* Three times the turn throughput and no map size: 2000 points for throughput, world
-       throughput left out rather than counted as zero. */
-    score_doc(doc, sizeof doc, 300, "null", 100, "{\"single_core_rounds_per_second\": 2000}", "null");
-    if (score_of(doc, &s) != 0 || !close_to(s.total, 1150.0 / 0.75) || !close_to(s.coverage, 0.75) || s.provisional ||
-        s.reason_count != 1 || !strstr(s.reasons[0], "World throughput")) {
-        fprintf(stderr, "score: a partial result gave %.3f, coverage %.2f, provisional %d, notes %d\n", s.total,
-                s.coverage, s.provisional, s.reason_count);
+    /* Six times the reference throughput on the reference CPU (3x: log2(4) = 2000 points), no map
+       size, and no frame rate measured: those parts are left out, not counted as zero. */
+    score_tpm_doc(doc, sizeof doc, 12000, "null", 100, reference, "null");
+    const char *partial[] = {doc, NULL, SCORE_NET_DOC};
+    double expected = (0.22 * 2000 + (1 - 0.13 - 0.12 - 0.08 - 0.22) * 1000) / (1 - 0.13 - 0.12 - 0.08);
+    if (score_of_docs(partial, 3, &s) != 0 || !close_to(s.total, expected) || !close_to(s.coverage, 0.67) ||
+        s.provisional || s.reason_count != 1 || !strstr(s.reasons[0], "World throughput") ||
+        !strstr(s.reasons[0], "Frame rate")) {
+        fprintf(stderr, "score: a partial game gave %.3f (expected %.3f), coverage %.2f, provisional %d, notes %d: %s\n",
+                s.total, expected, s.coverage, s.provisional, s.reason_count, s.reason_count ? s.reasons[0] : "");
+        print_parts(&s);
         failures++;
     }
 
     /* Short, crashed and with no CPU reference: provisional, with all three reasons. */
-    score_doc(doc, sizeof doc, 100, "4000", 20, "null", "\"crashed\"");
-    if (score_of(doc, &s) != 0 || !s.provisional || s.reason_count != 3 || s.hardware_known) {
-        fprintf(stderr, "score: a short failed run gave provisional %d with %d reasons\n", s.provisional, s.reason_count);
+    score_tpm_doc(doc, sizeof doc, 4000, "400000", 20, "null", "\"crashed\"");
+    const char *bad[] = {doc};
+    int crashed = 0, short_run = 0, no_reference = 0;
+    if (score_of_docs(bad, 1, &s) == 0) {
+        for (int i = 0; i < s.reason_count; i++) {
+            crashed |= strstr(s.reasons[i], "did not finish cleanly") != NULL;
+            short_run |= strstr(s.reasons[i], "20 turns were timed") != NULL;
+            no_reference |= strstr(s.reasons[i], "no CPU reference score") != NULL;
+        }
+    }
+    if (!s.provisional || !crashed || !short_run || !no_reference || s.hardware_known) {
+        fprintf(stderr, "score: a short failed run gave provisional %d (crashed %d, short %d, no reference %d)\n",
+                s.provisional, crashed, short_run, no_reference);
         failures++;
     }
 
-    if (score_of("{\"metric\": \"fps\"}", &s) == 0) {
-        fputs("score: scored something that is not a TPM result\n", stderr);
+    const char *unknown[] = {"{\"metric\": \"speed\", \"result\": {\"game\": \"g\"}}"};
+    if (score_of_docs(unknown, 1, &s) == 0) {
+        fputs("score: scored something that is not an OJH measurement\n", stderr);
         failures++;
     }
     if (failures) return 1;
-    puts("score: ok (points, hardware adjustment, weights, partial coverage and provisional runs match hand-worked answers)");
+    puts("score: ok (points, hardware adjustment, weights across turn speed, frame rate and network, partial coverage "
+         "and provisional runs match hand-worked answers)");
     return 0;
 }
 

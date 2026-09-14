@@ -2,6 +2,7 @@
 #include "procmeter.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #define MAX_TREE 256
 
@@ -129,6 +130,37 @@ void ojh_procmeter_json(ojh_json *w, const ojh_procmeter *m) {
         free(cpu);
     }
     ojh_json_end_object(w);
+}
+
+int ojh_procmeter_summarise(const ojh_procmeter *m, double from, double to, ojh_procmeter_summary *out) {
+    memset(out, 0, sizeof *out);
+    if (!m || m->count == 0) return 0;
+    double *mem = malloc((size_t)m->count * sizeof *mem);
+    double *cpu = malloc((size_t)m->count * sizeof *cpu);
+    int n = 0;
+    double previous = 0;
+    for (int i = 0; mem && cpu && i < m->count; i++) {
+        const sample *s = &m->samples[i];
+        double dt = s->t - (i > 0 ? m->samples[i - 1].t : previous);
+        if (s->t < from || (to >= 0 && s->t > to)) continue;
+        mem[n] = (double)s->memory_bytes;
+        cpu[n] = s->cpu_percent;
+        n++;
+        if (s->memory_bytes > out->peak_memory_bytes) out->peak_memory_bytes = s->memory_bytes;
+        if (s->processes > out->max_processes) out->max_processes = s->processes;
+        if (dt > 0) out->cpu_seconds += s->cpu_percent / 100.0 * dt;
+    }
+    if (n > 0) {
+        qsort(mem, (size_t)n, sizeof *mem, compare_double);
+        qsort(cpu, (size_t)n, sizeof *cpu, compare_double);
+        out->samples = n;
+        out->median_memory_bytes = (uint64_t)mem[n / 2];
+        out->median_cpu_percent = cpu[n / 2];
+        out->p95_cpu_percent = cpu[(int)((n - 1) * 0.95)];
+    }
+    free(mem);
+    free(cpu);
+    return n;
 }
 
 void ojh_procmeter_free(ojh_procmeter *m) {

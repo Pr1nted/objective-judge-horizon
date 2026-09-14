@@ -13,6 +13,20 @@ ojh_procmeter *ojh_procmeter_start(ojh_pid pid, double interval_seconds);
 void ojh_procmeter_stop(ojh_procmeter *m);
 int ojh_procmeter_samples(const ojh_procmeter *m);
 void ojh_procmeter_json(ojh_json *w, const ojh_procmeter *m);
+
+typedef struct {
+    int samples;
+    uint64_t peak_memory_bytes;
+    uint64_t median_memory_bytes;
+    double median_cpu_percent; /* 100 = one core busy */
+    double p95_cpu_percent;
+    double cpu_seconds;        /* summed over every core, over the whole window asked for */
+    int max_processes;
+} ojh_procmeter_summary;
+
+/* The samples taken between from and to seconds after the meter started (to < 0 for the
+   end). Returns the number of samples in that window. */
+int ojh_procmeter_summarise(const ojh_procmeter *m, double from, double to, ojh_procmeter_summary *out);
 void ojh_procmeter_free(ojh_procmeter *m);
 
 #endif

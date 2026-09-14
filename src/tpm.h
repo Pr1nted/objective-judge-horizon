@@ -5,6 +5,7 @@
 
 #include "gamespec.h"
 #include "json.h"
+#include "procmeter.h"
 #include "runner.h"
 
 /* TPM, turns per minute: how many complete turns a game plays in a minute with every
@@ -62,6 +63,9 @@ typedef struct {
     long regions;           /* provinces or tiles; 0 when the game does not say */
     char region_kind[16];
     char how[320];          /* what was timed, in words */
+    int has_resources;      /* CPU and memory were sampled while the game ran */
+    ojh_procmeter_summary run_resources;  /* the whole run */
+    ojh_procmeter_summary turn_resources; /* only while turns were being played */
 } ojh_tpm;
 
 /* Reads a finished run's lines into the result. Returns 0 when turns were found. */

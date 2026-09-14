@@ -21,6 +21,8 @@ add_executable(ojh
     src/report.c
     src/gamespec.c
     src/score.c
+    src/stats.c
+    src/chart.c
 )
 target_include_directories(ojh PRIVATE src)
 

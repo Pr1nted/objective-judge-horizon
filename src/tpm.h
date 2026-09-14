@@ -32,6 +32,7 @@ typedef struct {
     const char *unciv_jar;      /* Unciv.jar */
     const char *java;           /* java, to run Unciv */
     const char *javac;          /* javac, to build OJH's Unciv driver */
+    const char *jar_tool;       /* jar, to extract Unciv's rulesets */
     const char *drivers_dir;    /* OJH's drivers/ folder */
     const char *work_dir;       /* scratch space for scripts, saves and the compiled driver */
     int turns;

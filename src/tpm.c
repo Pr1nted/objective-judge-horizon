@@ -258,14 +258,23 @@ int ojh_tpm_run(ojh_game game, const ojh_tpm_options *o, ojh_tpm *out, char *err
             return run_and_parse(game, argv, env, dir, timeout, out, error, error_len);
         }
         case OJH_GAME_UNCIV: {
-            if (!o->unciv_jar || !o->java || !o->javac || !o->drivers_dir || !o->work_dir) {
-                return fail(error, error_len, "needs --unciv-jar, --java, --javac, --drivers and --work");
+            if (!o->unciv_jar || !o->java || !o->javac || !o->jar_tool || !o->drivers_dir || !o->work_dir) {
+                return fail(error, error_len, "needs --unciv-jar, --java, --javac, --jar, --drivers and --work");
             }
-            char classes[4096], source[4096], classpath[8400];
+            char classes[4096], source[4096], assets[4096], classpath[8400];
             join_path(classes, sizeof classes, o->work_dir, "unciv-driver");
             join_path(source, sizeof source, o->drivers_dir, "unciv/UncivTpm.java");
+            join_path(assets, sizeof assets, o->work_dir, "unciv-assets");
             ojh_make_dir(o->work_dir);
             ojh_make_dir(classes);
+            ojh_make_dir(assets);
+            /* Unciv reads its rulesets from jsons/ under the working directory; the jar has them. */
+            const char *extract[] = {o->jar_tool, "xf", o->unciv_jar, "jsons", NULL};
+            ojh_run *x = ojh_run_start(extract, NULL, assets);
+            if (!x) return fail(error, error_len, "the jar tool did not start");
+            int extracted = ojh_run_wait(x, 600);
+            ojh_run_free(x);
+            if (extracted != 0) return fail(error, error_len, "could not extract Unciv's rulesets from the jar");
             const char *compile[] = {o->javac, "-nowarn", "-cp", o->unciv_jar, "-d", classes, source, NULL};
             ojh_run *c = ojh_run_start(compile, NULL, NULL);
             if (!c) return fail(error, error_len, "javac did not start");
@@ -279,7 +288,7 @@ int ojh_tpm_run(ojh_game game, const ojh_tpm_options *o, ojh_tpm *out, char *err
 #endif
             const char *argv[] = {o->java, "-Djava.awt.headless=true", "-cp", classpath, "UncivTpm", players, turns,
                                   "small", NULL};
-            return run_and_parse(game, argv, NULL, NULL, timeout, out, error, error_len);
+            return run_and_parse(game, argv, NULL, assets, timeout, out, error, error_len);
         }
         default:
             return fail(error, error_len, "unknown game");

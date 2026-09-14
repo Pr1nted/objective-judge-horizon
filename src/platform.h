@@ -74,6 +74,8 @@ int ojh_wait(ojh_process *p);                                  /* the exit code,
 /* argv (NULL-ended) as one command line, quoted the way the C runtime parses it back. */
 int ojh_command_line(const char *const *argv, char *out, size_t cap); /* 0 on success */
 #endif
+/* Creates a directory; an existing one is fine. 0 on success. */
+int ojh_make_dir(const char *path);
 /* The process and all its descendants, root first. Returns how many were written. */
 int ojh_process_tree(ojh_pid root, ojh_pid *out, int max);
 /* Private memory in bytes and CPU time (user + system) in nanoseconds. 0 if the

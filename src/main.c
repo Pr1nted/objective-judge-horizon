@@ -14,6 +14,7 @@
 #include "procmeter.h"
 #include "runner.h"
 #include "sha256.h"
+#include "tpm.h"
 
 #define OJH_VERSION "0.1.0"
 
@@ -24,7 +25,12 @@ static int usage(void) {
           "  ojh machine [seconds]                  this machine's profile and CPU reference score\n"
           "  ojh relay <listen> <host> <port> <seconds> [clients]\n"
           "                                         count a netcode's traffic on loopback\n"
-          "  ojh selftest sha256|json|relay|procmeter|runner\n",
+          "  ojh tpm <opendoctrines|gd5|freeciv|unciv> [--turns N] [--seed S] [--players P] [--timeout S]\n"
+          "          [--od-server PATH --od-data DIR] [--gd5-python PATH --gd5-dir DIR]\n"
+          "          [--freeciv-server PATH] [--unciv-jar PATH --java PATH --javac PATH]\n"
+          "          [--drivers DIR] [--work DIR] [--out FILE]\n"
+          "                                         turns per minute, every player AI\n"
+          "  ojh selftest sha256|json|relay|procmeter|runner|tpm\n",
           stderr);
     return 2;
 }
@@ -64,7 +70,191 @@ static int cmd_relay(int argc, char **argv) {
     return 0;
 }
 
+static int cmd_tpm(int argc, char **argv) {
+    if (argc < 3) return usage();
+    ojh_game game;
+    if (ojh_game_parse(argv[2], &game) != 0) {
+        fprintf(stderr, "tpm: unknown game '%s'\n", argv[2]);
+        return 2;
+    }
+    const char *tmp = getenv("TMPDIR");
+    if (!tmp) tmp = getenv("TEMP");
+    if (!tmp) tmp = ".";
+    static char work[1024];
+    snprintf(work, sizeof work, "%s/ojh-work", tmp);
+
+    ojh_tpm_options o;
+    memset(&o, 0, sizeof o);
+    o.turns = game == OJH_GAME_OPENDOCTRINES ? 500 : 100;
+    o.seed = 20260914u;
+    o.players = 8;
+    o.timeout_seconds = 3600;
+    o.freeciv_server = "freeciv-server";
+    o.java = "java";
+    o.javac = "javac";
+    o.drivers_dir = "drivers";
+    o.work_dir = work;
+    const char *out_path = NULL;
+    for (int i = 3; i < argc; i += 2) {
+        const char *a = argv[i];
+        const char *v = i + 1 < argc ? argv[i + 1] : NULL;
+        if (!v) {
+            fprintf(stderr, "tpm: %s needs a value\n", a);
+            return 2;
+        }
+        if (strcmp(a, "--turns") == 0) o.turns = atoi(v);
+        else if (strcmp(a, "--seed") == 0) o.seed = (unsigned)strtoul(v, NULL, 10);
+        else if (strcmp(a, "--players") == 0) o.players = atoi(v);
+        else if (strcmp(a, "--timeout") == 0) o.timeout_seconds = atof(v);
+        else if (strcmp(a, "--od-server") == 0) o.od_server = v;
+        else if (strcmp(a, "--od-data") == 0) o.od_data = v;
+        else if (strcmp(a, "--gd5-python") == 0) o.gd5_python = v;
+        else if (strcmp(a, "--gd5-dir") == 0) o.gd5_dir = v;
+        else if (strcmp(a, "--freeciv-server") == 0) o.freeciv_server = v;
+        else if (strcmp(a, "--unciv-jar") == 0) o.unciv_jar = v;
+        else if (strcmp(a, "--java") == 0) o.java = v;
+        else if (strcmp(a, "--javac") == 0) o.javac = v;
+        else if (strcmp(a, "--drivers") == 0) o.drivers_dir = v;
+        else if (strcmp(a, "--work") == 0) o.work_dir = v;
+        else if (strcmp(a, "--out") == 0) out_path = v;
+        else {
+            fprintf(stderr, "tpm: unknown option %s\n", a);
+            return 2;
+        }
+    }
+    if (o.turns < 1) o.turns = 1;
+
+    ojh_machine m;
+    ojh_reference ref;
+    ojh_machine_read(&m);
+    fprintf(stderr, "tpm: measuring this machine's reference score\n");
+    ojh_reference_measure(&ref, 3.0);
+    fprintf(stderr, "tpm: %s for %d turns\n", ojh_game_name(game), o.turns);
+
+    ojh_tpm result;
+    char error[1024] = "";
+    int status = ojh_tpm_run(game, &o, &result, error, sizeof error);
+
+    FILE *out = out_path ? fopen(out_path, "wb") : stdout;
+    if (!out) {
+        fprintf(stderr, "tpm: cannot write %s\n", out_path);
+        ojh_tpm_free(&result);
+        return 1;
+    }
+    ojh_json w;
+    ojh_json_init(&w, out);
+    ojh_json_object(&w);
+    ojh_json_key(&w, "ojh_version"); ojh_json_string(&w, OJH_VERSION);
+    ojh_json_key(&w, "metric"); ojh_json_string(&w, "tpm");
+    ojh_json_key(&w, "machine"); ojh_machine_json(&w, &m, &ref);
+    ojh_json_key(&w, "settings");
+    ojh_json_object(&w);
+    ojh_json_key(&w, "turns_requested"); ojh_json_int(&w, o.turns);
+    ojh_json_key(&w, "seed"); ojh_json_uint(&w, o.seed);
+    ojh_json_key(&w, "players_requested"); ojh_json_int(&w, o.players);
+    ojh_json_end_object(&w);
+    ojh_json_key(&w, "result"); ojh_tpm_json(&w, &result);
+    ojh_json_key(&w, "error");
+    if (status == 0) ojh_json_null(&w);
+    else ojh_json_string(&w, error);
+    ojh_json_end_object(&w);
+    if (out != stdout) fclose(out);
+    if (status == 0) {
+        fprintf(stderr, "tpm: %s played %d turns in %.2f s: %.1f turns per minute\n", ojh_game_name(game),
+                result.turns, result.play_seconds, ojh_tpm_value(&result));
+    } else {
+        fprintf(stderr, "tpm: %s failed: %s\n", ojh_game_name(game), error);
+    }
+    ojh_tpm_free(&result);
+    return status == 0 ? 0 : 1;
+}
+
 /* ---- self-tests: each proves one piece against a known answer */
+
+static int close_to(double a, double b) { return a - b < 1e-6 && b - a < 1e-6; }
+
+/* Each game's output format, as its program prints it, through its parser. */
+static int test_tpm(void) {
+    int failures = 0;
+    ojh_tpm t;
+
+    ojh_line gd5[] = {
+        {0.1, OJH_STDOUT, "pygame-ce 2.5.7"},
+        {4.0, OJH_STDOUT, "{\"turn\": 1, \"logic_seconds\": 0.4, \"total_seconds\": 0.5, \"living_nations\": 35}"},
+        {4.5, OJH_STDOUT, "{\"turn\": 2, \"logic_seconds\": 0.4, \"total_seconds\": 0.5, \"living_nations\": 35}"},
+        {5.0, OJH_STDOUT, "{\"turn\": 3, \"logic_seconds\": 0.4, \"total_seconds\": 0.5, \"living_nations\": 35}"},
+        {5.1, OJH_STDOUT, "{\"summary\": {\"game\": \"Greater Diplomacy 5\", \"turns\": 3, \"regions\": 906, "
+                          "\"nations_at_start\": 35, \"boot_seconds\": 3.998}}"},
+    };
+    if (ojh_tpm_parse(OJH_GAME_GD5, gd5, 5, &t) != 0 || t.turns != 3 || !close_to(t.play_seconds, 1.5) ||
+        !close_to(ojh_tpm_value(&t), 120.0) || t.regions != 906 || t.players != 35 || !close_to(t.boot_seconds, 3.998)) {
+        fprintf(stderr, "tpm: GD5 parse gave turns %d play %.3f regions %ld players %d\n", t.turns, t.play_seconds,
+                t.regions, t.players);
+        failures++;
+    }
+    ojh_tpm_free(&t);
+
+    ojh_line unciv[] = {
+        {1.0, OJH_STDOUT, "{\"turn\": 1, \"seconds\": 0.250000, \"game_turn\": 1, \"major_civs_alive\": 8}"},
+        {1.3, OJH_STDOUT, "{\"turn\": 2, \"seconds\": 0.250000, \"game_turn\": 2, \"major_civs_alive\": 8}"},
+        {1.6, OJH_STDOUT, "{\"turn\": 3, \"seconds\": 0.250000, \"game_turn\": 3, \"major_civs_alive\": 8}"},
+        {1.9, OJH_STDOUT, "{\"turn\": 4, \"seconds\": 0.250000, \"game_turn\": 4, \"major_civs_alive\": 8}"},
+        {2.0, OJH_STDOUT, "{\"summary\": {\"game\": \"Unciv\", \"civs\": 8, \"map_size\": \"small\", \"tiles\": 1234, "
+                          "\"turns\": 4, \"boot_seconds\": 0.800, \"turn_seconds\": 1.000, \"tpm\": 240.00}}"},
+    };
+    if (ojh_tpm_parse(OJH_GAME_UNCIV, unciv, 5, &t) != 0 || t.turns != 4 || !close_to(t.play_seconds, 1.0) ||
+        !close_to(ojh_tpm_value(&t), 240.0) || t.regions != 1234 || t.players != 8) {
+        fprintf(stderr, "tpm: Unciv parse gave turns %d play %.3f regions %ld players %d\n", t.turns, t.play_seconds,
+                t.regions, t.players);
+        failures++;
+    }
+    ojh_tpm_free(&t);
+
+    ojh_line freeciv[] = {
+        {0.5, OJH_STDOUT, "3: Konrad Adenauer rules the Germans."},
+        {0.5, OJH_STDOUT, "3: Giuseppe Mazzini rules the Italians."},
+        {0.5, OJH_STDOUT, "3: Bench rules the Indonesians."},
+        {0.6, OJH_STDOUT, "3: Creating a map of size 36 x 72 = 2592 tiles (2666 requested)."},
+        {1.9, OJH_STDERR, "4: in srv_running() [../server/srv_main.c::2861]: srv_running() mostly redundant send_server_settings()"},
+        {2.0, OJH_STDERR, "4: in srv_running() [../server/srv_main.c::2925]: End/start-turn server/ai activities: 0.005 seconds"},
+        {2.5, OJH_STDERR, "4: in srv_running() [../server/srv_main.c::2925]: End/start-turn server/ai activities: 0.039 seconds"},
+        {3.0, OJH_STDERR, "4: in srv_running() [../server/srv_main.c::2925]: End/start-turn server/ai activities: 0.027 seconds"},
+        {3.5, OJH_STDERR, "4: in srv_running() [../server/srv_main.c::2925]: End/start-turn server/ai activities: 0.044 seconds"},
+    };
+    if (ojh_tpm_parse(OJH_GAME_FREECIV, freeciv, 9, &t) != 0 || t.turns != 3 || !close_to(t.play_seconds, 1.5) ||
+        !close_to(ojh_tpm_value(&t), 120.0) || t.regions != 2592 || t.players != 3 || !close_to(t.boot_seconds, 2.0)) {
+        fprintf(stderr, "tpm: Freeciv parse gave turns %d play %.3f regions %ld players %d boot %.3f\n", t.turns,
+                t.play_seconds, t.regions, t.players, t.boot_seconds);
+        failures++;
+    }
+    ojh_tpm_free(&t);
+
+    ojh_line od[] = {
+        {0.2, OJH_STDOUT, "[EVAL] 1 map(s) x 500 turn(s), seed 20260914, difficulty hard, worlds generated"},
+        {1.0, OJH_STDOUT, "[EVAL] map 1/1 [pangaea] seed=1395647406 countries=22"},
+        {31.0, OJH_STDOUT, "[EVAL]   turn 250/500  22 alive  largest 12.6%  (0.120 s/turn)"},
+        {51.0, OJH_STDOUT, "[EVAL]   turn 500/500  21 alive  largest 13.0%  (0.100 s/turn)"},
+        {51.1, OJH_STDOUT, "[EVAL]   cap after 500 turns | alive 21/22 | largest 13.0% | concentration 0.070"},
+    };
+    if (ojh_tpm_parse(OJH_GAME_OPENDOCTRINES, od, 5, &t) != 0 || t.turns != 500 || !close_to(t.play_seconds, 50.0) ||
+        !close_to(ojh_tpm_value(&t), 600.0) || t.players != 22 || !close_to(t.boot_seconds, 1.0)) {
+        fprintf(stderr, "tpm: Open Doctrines parse gave turns %d play %.3f players %d boot %.3f\n", t.turns,
+                t.play_seconds, t.players, t.boot_seconds);
+        failures++;
+    }
+    ojh_tpm_free(&t);
+
+    ojh_line nothing[] = {{0.1, OJH_STDOUT, "Traceback (most recent call last):"}};
+    if (ojh_tpm_parse(OJH_GAME_GD5, nothing, 1, &t) == 0) {
+        fputs("tpm: a run with no turns was reported as a success\n", stderr);
+        failures++;
+    }
+    ojh_tpm_free(&t);
+
+    if (failures) return 1;
+    puts("tpm: ok (GD5, Unciv, Freeciv and Open Doctrines output formats parse to the expected turns, times, players and regions)");
+    return 0;
+}
 
 static int test_sha256(void) {
     static const struct {
@@ -365,6 +555,7 @@ int main(int argc, char **argv) {
     if (argc < 2) return usage();
     if (strcmp(argv[1], "machine") == 0) return cmd_machine(argc, argv);
     if (strcmp(argv[1], "relay") == 0) return cmd_relay(argc, argv);
+    if (strcmp(argv[1], "tpm") == 0) return cmd_tpm(argc, argv);
     if (strcmp(argv[1], "selftest") == 0 && argc > 2) {
         if (strcmp(argv[2], "sha256") == 0) return test_sha256();
         if (strcmp(argv[2], "json") == 0) return test_json();
@@ -372,6 +563,7 @@ int main(int argc, char **argv) {
         if (strcmp(argv[2], "procmeter") == 0) return test_procmeter();
         if (strcmp(argv[2], "busy-child") == 0) return busy_child();
         if (strcmp(argv[2], "runner") == 0) return test_runner();
+        if (strcmp(argv[2], "tpm") == 0) return test_tpm();
         if (strcmp(argv[2], "print-lines") == 0) return print_lines();
         if (strcmp(argv[2], "sleep-long") == 0) {
             ojh_sleep(60);

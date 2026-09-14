@@ -16,6 +16,7 @@ add_executable(ojh
     src/netmeter.c
     src/procmeter.c
     src/runner.c
+    src/tpm.c
 )
 target_include_directories(ojh PRIVATE src)
 
@@ -39,6 +40,6 @@ else()
 endif()
 
 enable_testing()
-foreach(test sha256 json relay procmeter runner)
+foreach(test sha256 json relay procmeter runner tpm)
     add_test(NAME ${test} COMMAND ojh selftest ${test})
 endforeach()

@@ -4,12 +4,14 @@
 #endif
 #include "platform.h"
 
+#include <errno.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #ifdef _WIN32
+#  include <direct.h>
 #  include <process.h>
 #  include <psapi.h>
 #  include <tlhelp32.h>
@@ -22,6 +24,7 @@
 #  include <signal.h>
 #  include <spawn.h>
 #  include <sys/socket.h>
+#  include <sys/stat.h>
 #  include <sys/wait.h>
 #  include <time.h>
 #  include <unistd.h>
@@ -383,6 +386,14 @@ static int tree_from_pairs(ojh_pid root, const pid_pair *pairs, int count, ojh_p
     return n;
 }
 #endif
+
+int ojh_make_dir(const char *path) {
+#ifdef _WIN32
+    return (_mkdir(path) == 0 || errno == EEXIST) ? 0 : -1;
+#else
+    return (mkdir(path, 0755) == 0 || errno == EEXIST) ? 0 : -1;
+#endif
+}
 
 int ojh_process_tree(ojh_pid root, ojh_pid *out, int max) {
     if (max < 1) return 0;

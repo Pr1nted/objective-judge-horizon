@@ -35,7 +35,7 @@ static int usage(void) {
           "  ojh machine [seconds]                  this machine's profile and CPU reference score\n"
           "  ojh relay <listen> <host> <port> <seconds> [clients]\n"
           "                                         count a netcode's traffic on loopback\n"
-          "  ojh tpm <opendoctrines|gd5|freeciv|unciv|your-game.json> [--turns N] [--seed S] [--players P] [--timeout S]\n"
+          "  ojh tpm <opendoctrines|gd5|freeciv|unciv|your-game.json> [--turns N] [--repeat N] [--seed S] [--players P] [--timeout S]\n"
           "          [--od-server PATH --od-data DIR] [--gd5-python PATH --gd5-dir DIR]\n"
           "          [--freeciv-server PATH] [--unciv-jar PATH --java PATH --javac PATH --jar PATH]\n"
           "          [--drivers DIR] [--work DIR] [--out FILE]\n"
@@ -164,6 +164,7 @@ static int cmd_tpm(int argc, char **argv) {
     static char self[1024];
     if (ojh_self_path(self, sizeof self) == 0) o.ojh_path = self;
     const char *out_path = NULL;
+    int repeats = 1;
     for (int i = 3; i < argc; i += 2) {
         const char *a = argv[i];
         const char *v = i + 1 < argc ? argv[i + 1] : NULL;
@@ -172,6 +173,7 @@ static int cmd_tpm(int argc, char **argv) {
             return 2;
         }
         if (strcmp(a, "--turns") == 0) o.turns = atoi(v);
+        else if (strcmp(a, "--repeat") == 0) repeats = atoi(v);
         else if (strcmp(a, "--seed") == 0) o.seed = (unsigned)strtoul(v, NULL, 10);
         else if (strcmp(a, "--players") == 0) o.players = atoi(v);
         else if (strcmp(a, "--timeout") == 0) o.timeout_seconds = atof(v);
@@ -201,10 +203,35 @@ static int cmd_tpm(int argc, char **argv) {
     ojh_reference_measure(&ref, 3.0);
     fprintf(stderr, "tpm: %s for %d turns\n", name, o.turns);
 
-    ojh_tpm result;
-    char error[1024] = "";
-    int status = from_spec ? ojh_tpm_run_spec(&spec, &o, &result, error, sizeof error)
-                           : ojh_tpm_run(game, &o, &result, error, sizeof error);
+    if (repeats < 1) repeats = 1;
+    if (repeats > 20) repeats = 20;
+    static ojh_tpm runs[20];
+    static char run_errors[20][1024];
+    int run_status[20];
+    int order[20], ok_count = 0;
+    for (int k = 0; k < repeats; k++) {
+        run_errors[k][0] = '\0';
+        run_status[k] = from_spec ? ojh_tpm_run_spec(&spec, &o, &runs[k], run_errors[k], sizeof run_errors[k])
+                                  : ojh_tpm_run(game, &o, &runs[k], run_errors[k], sizeof run_errors[k]);
+        if (repeats > 1) {
+            fprintf(stderr, "tpm: run %d of %d: %.1f turns per minute%s\n", k + 1, repeats, ojh_tpm_value(&runs[k]),
+                    run_status[k] == 0 ? "" : " (failed)");
+        }
+        if (run_status[k] == 0) order[ok_count++] = k;
+    }
+    for (int i = 1; i < ok_count; i++) {
+        int v = order[i], j = i - 1;
+        while (j >= 0 && ojh_tpm_value(&runs[order[j]]) > ojh_tpm_value(&runs[v])) {
+            order[j + 1] = order[j];
+            j--;
+        }
+        order[j + 1] = v;
+    }
+    int chosen = ok_count > 0 ? order[ok_count / 2] : 0;
+    ojh_tpm result = runs[chosen];
+    char error[1024];
+    snprintf(error, sizeof error, "%s", run_errors[chosen]);
+    int status = run_status[chosen];
 
     FILE *out = out_path ? fopen(out_path, "wb") : stdout;
     if (!out) {
@@ -230,6 +257,25 @@ static int cmd_tpm(int argc, char **argv) {
     }
     ojh_json_end_object(&w);
     ojh_json_key(&w, "result"); ojh_tpm_json(&w, &result);
+    ojh_json_key(&w, "repeats");
+    ojh_json_object(&w);
+    ojh_json_key(&w, "runs"); ojh_json_int(&w, repeats);
+    ojh_json_key(&w, "finished"); ojh_json_int(&w, ok_count);
+    ojh_json_key(&w, "chosen"); ojh_json_string(&w, "median turns per minute");
+    ojh_json_key(&w, "tpm_values");
+    ojh_json_array(&w);
+    for (int k = 0; k < repeats; k++) {
+        if (run_status[k] == 0) ojh_json_double(&w, ojh_tpm_value(&runs[k]), 2);
+        else ojh_json_null(&w);
+    }
+    ojh_json_end_array(&w);
+    ojh_json_key(&w, "tpm_slowest");
+    if (ok_count) ojh_json_double(&w, ojh_tpm_value(&runs[order[0]]), 2);
+    else ojh_json_null(&w);
+    ojh_json_key(&w, "tpm_fastest");
+    if (ok_count) ojh_json_double(&w, ojh_tpm_value(&runs[order[ok_count - 1]]), 2);
+    else ojh_json_null(&w);
+    ojh_json_end_object(&w);
     ojh_json_key(&w, "error");
     if (status == 0) ojh_json_null(&w);
     else ojh_json_string(&w, error);
@@ -251,7 +297,7 @@ static int cmd_tpm(int argc, char **argv) {
         }
         if (root) ojh_jfree(root);
     }
-    ojh_tpm_free(&result);
+    for (int k = 0; k < repeats; k++) ojh_tpm_free(&runs[k]);
     ojh_gamespec_free(&spec);
     return status == 0 ? 0 : 1;
 }
@@ -712,9 +758,26 @@ static int cmd_net(int argc, char **argv) {
                      "that compressed game after each one, counted once up and once down; no relay, so turn delivery is n/a",
                      o.turns, o.players);
         }
+    } else if (!o.od_server || !o.od_data) {
+        snprintf(error, sizeof error, "needs --od-server and --od-data");
     } else {
-        snprintf(error, sizeof error,
-                 "Open Doctrines has no client that can join a match without a window, so OJH cannot drive its netcode yet");
+        static char od_env_clients[48];
+        snprintf(od_env_clients, sizeof od_env_clients, "OD_OJH_NET=%d", clients);
+        const char *server[] = {o.od_server, "--eval-ai", "1", turns_text, seed_text, "2", "--data", o.od_data, NULL};
+        const char *env[] = {"OD_OJH=1", od_env_clients, NULL};
+        plan.mode = OJH_NET_REPORTED;
+        plan.server = server;
+        plan.server_env = env;
+        plan.turns_from_protocol = 1;
+        plan.data_line = "data";
+        plan.players = 0;
+        plan.transport = "turn delta the host broadcasts to each client";
+        status = ojh_net_run(&plan, &result, error, sizeof error);
+        snprintf(result.how, sizeof result.how,
+                 "Open Doctrines' headless eval with OD_OJH_NET: after every turn it packs the same turn delta its "
+                 "multiplayer host broadcasts (Game::mpResolveTurn, SaveManager::packTurn) and reports its size times %d "
+                 "clients. Joining needs a signed-in account, so no client is on the wire: the bytes are the host's real "
+                 "payload, turn delivery is n/a, and the few bytes of each client's orders are not counted", clients);
     }
     (void)seed_text;
 

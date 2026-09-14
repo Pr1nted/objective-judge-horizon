@@ -40,6 +40,8 @@ static const ojh_stat STATS[] = {
      "player-turns/min", OJH_MORE_IS_BETTER, "turns per minute times players, so a game with more players is not punished"},
     {"tpm_x_regions", OJH_METRIC_TPM, TURNS, "Region-turns per minute", "result.tpm_x_regions", OJH_UNIT_NUMBER,
      "region-turns/min", OJH_MORE_IS_BETTER, "turns per minute times map regions, so a bigger map is not punished"},
+    {"tpm_slowest_run", OJH_METRIC_TPM, TURNS, "Turns per minute, slowest run", "repeats.tpm_slowest", OJH_UNIT_NUMBER,
+     "turns/min", OJH_MORE_IS_BETTER, "the slowest of the repeated runs: the figure a game reaches every time"},
     {"median_turn", OJH_METRIC_TPM, TURNS, "Median turn", "result.per_turn.median_seconds", OJH_UNIT_SECONDS, NULL,
      OJH_LESS_IS_BETTER, "the typical time one turn takes"},
     {"p95_turn", OJH_METRIC_TPM, TURNS, "Slow turn (95th percentile)", "result.per_turn.p95_seconds", OJH_UNIT_SECONDS, NULL,

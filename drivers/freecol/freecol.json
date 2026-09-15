@@ -1,0 +1,14 @@
+{
+  "ojh_game_spec": 1,
+  "id": "freecol",
+  "name": "FreeCol",
+  "version": "1.2.0",
+  "license": "GPL-2.0",
+  "homepage": "https://www.freecol.org",
+  "notes": "FreeCol's own server with every European and native nation played by FreeCol's AI, started the way FreeCol's main does and run in its only-AI-turns debug mode. FREECOL_DIR is the folder with FreeCol.jar, JAVA_BIN the JDK bin folder, FREECOL_EUROPEANS the European nations (classic rules allow up to 8) and FREECOL_MAP the map as WIDTHxHEIGHT tiles.",
+  "command": ["./tpm.sh", "--turns", "{turns}", "--seed", "{seed}", "--work", "{work}"],
+  "turns": {"from": "protocol"},
+  "region_kind": "tiles",
+  "default_turns": 100,
+  "timeout_seconds": 14400
+}

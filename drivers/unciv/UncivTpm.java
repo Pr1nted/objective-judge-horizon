@@ -125,9 +125,13 @@ public final class UncivTpm {
             System.out.printf(Locale.ROOT, "OJH load %.6f%n", loadSeconds);
         }
         int tiles = info.getTileMap().getValues().size();
+        int aiCivs = 0;
+        for (Civilization civ : info.getCivilizations()) {
+            if (!civ.isBarbarian() && !civ.isSpectator()) aiCivs++;
+        }
         System.out.printf(Locale.ROOT, "{\"summary\": {\"game\": \"Unciv\", \"ruleset\": \"%s\", \"civs\": %d, \"map_size\": \"%s\", \"tiles\": %d, "
                         + "\"turns\": %d, \"boot_seconds\": %.3f, \"turn_seconds\": %.3f, \"tpm\": %.2f, \"java\": \"%s\"}}%n",
-                ruleset.getName(), players.size() - 1, size, tiles, played, bootSeconds, total,
+                ruleset.getName(), aiCivs, size, tiles, played, bootSeconds, total,
                 total > 0 ? played / (total / 60.0) : 0.0, System.getProperty("java.version"));
         System.exit(0);
     }

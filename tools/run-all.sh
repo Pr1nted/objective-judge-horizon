@@ -10,6 +10,7 @@ net_turns=${NET_TURNS:-20}
 clients=${CLIENTS:-2}
 fps_seconds=${FPS_SECONDS:-5}
 fps_timeout=${FPS_TIMEOUT:-900}
+tpm_timeout=${TPM_TIMEOUT:-3600}
 seed=${SEED:-20260914}
 java_bin=${JAVA_BIN:-}
 
@@ -64,7 +65,7 @@ measure() {
 common="--seed $seed --drivers $here/drivers --work $work"
 
 if [ -n "$od_server" ] && [ -n "$od_data" ]; then
-    wants tpm && measure "Open Doctrines turn speed" tpm opendoctrines --turns "$turns" --repeat "$repeats" $common --od-server "$od_server" --od-data "$od_data" $od_world --out "$out/opendoctrines-tpm.json"
+    wants tpm && measure "Open Doctrines turn speed" tpm opendoctrines --turns "$turns" --repeat "$repeats" --timeout "$tpm_timeout" $common --od-server "$od_server" --od-data "$od_data" $od_world --out "$out/opendoctrines-tpm.json"
     if [ -n "$od_save" ]; then
         wants footprint && measure "Open Doctrines footprint" footprint opendoctrines $common --od-server "$od_server" --od-data "$od_data" --od-save "$od_save" --out "$out/opendoctrines-footprint.json"
     else
@@ -81,21 +82,21 @@ if [ -n "$od_server" ] && [ -n "$od_data" ]; then
 fi
 
 if [ -n "$gd5_python" ] && [ -n "$gd5_dir" ]; then
-    wants tpm && measure "Greater Diplomacy 5 turn speed" tpm gd5 --turns "$turns" --repeat "$repeats" $common --gd5-python "$gd5_python" --gd5-dir "$gd5_dir" $gd5_world --out "$out/gd5-tpm.json"
+    wants tpm && measure "Greater Diplomacy 5 turn speed" tpm gd5 --turns "$turns" --repeat "$repeats" --timeout "$tpm_timeout" $common --gd5-python "$gd5_python" --gd5-dir "$gd5_dir" $gd5_world --out "$out/gd5-tpm.json"
     wants footprint && measure "Greater Diplomacy 5 footprint" footprint gd5 --turns 20 $common --gd5-python "$gd5_python" --gd5-dir "$gd5_dir" $gd5_world --out "$out/gd5-footprint.json"
     wants net && measure "Greater Diplomacy 5 network" net gd5 --turns "$net_turns" --clients "$clients" $common --gd5-python "$gd5_python" --gd5-dir "$gd5_dir" $gd5_world --out "$out/gd5-net.json"
     wants fps && measure "Greater Diplomacy 5 frame rate" fps gd5 --turns 20 --seconds "$fps_seconds" --timeout "$fps_timeout" $common --gd5-python "$gd5_python" --gd5-dir "$gd5_dir" $gd5_world --out "$out/gd5-fps.json"
 fi
 
 if command -v "$freeciv_server" >/dev/null 2>&1; then
-    wants tpm && measure "Freeciv turn speed" tpm freeciv --turns "$turns" --repeat "$repeats" $common --freeciv-server "$freeciv_server" $freeciv_world --out "$out/freeciv-tpm.json"
+    wants tpm && measure "Freeciv turn speed" tpm freeciv --turns "$turns" --repeat "$repeats" --timeout "$tpm_timeout" $common --freeciv-server "$freeciv_server" $freeciv_world --out "$out/freeciv-tpm.json"
     wants footprint && measure "Freeciv footprint" footprint freeciv --turns 20 $common --freeciv-server "$freeciv_server" $freeciv_world --out "$out/freeciv-footprint.json"
     wants net && measure "Freeciv network" net freeciv --turns "$net_turns" --clients "$clients" $common --freeciv-server "$freeciv_server" --freeciv-client "$freeciv_client" $freeciv_world --out "$out/freeciv-net.json"
     wants fps && measure "Freeciv frame rate" fps freeciv $common --out "$out/freeciv-fps.json"
 fi
 
 if [ -n "$unciv_jar" ]; then
-    wants tpm && measure "Unciv turn speed" tpm unciv --turns "$turns" --repeat "$repeats" $common --unciv-jar "$unciv_jar" $java_options $unciv_world --out "$out/unciv-tpm.json"
+    wants tpm && measure "Unciv turn speed" tpm unciv --turns "$turns" --repeat "$repeats" --timeout "$tpm_timeout" $common --unciv-jar "$unciv_jar" $java_options $unciv_world --out "$out/unciv-tpm.json"
     wants footprint && measure "Unciv footprint" footprint unciv --turns 20 $common --unciv-jar "$unciv_jar" $java_options $unciv_world --out "$out/unciv-footprint.json"
     wants net && measure "Unciv network" net unciv --turns "$net_turns" $common --unciv-jar "$unciv_jar" $java_options $unciv_world --out "$out/unciv-net.json"
     wants fps && measure "Unciv frame rate" fps unciv --turns 20 --seconds "$fps_seconds" --timeout "$fps_timeout" $common --unciv-jar "$unciv_jar" $java_options $unciv_world --out "$out/unciv-fps.json"

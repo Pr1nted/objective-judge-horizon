@@ -406,6 +406,7 @@ int ojh_tpm_run(ojh_game game, const ojh_tpm_options *o, ojh_tpm *out, char *err
             if (!f) return fail(error, error_len, "cannot write the Freeciv start-up script");
             char size_lines[160] = "";
             if (o->map_size) snprintf(size_lines, sizeof size_lines, "set mapsize FULLSIZE\nset size %s\n", o->map_size);
+            if (o->players > 50) strncat(size_lines, "set nationset all\n", sizeof size_lines - strlen(size_lines) - 1);
             fprintf(f, "set gameseed %u\nset mapseed %u\nset timeout -1\nset minplayers 0\nset ec_turns 0\n"
                        "set aifill %d\nset endturn %d\nset autosaves \"\"\n%shard\ncreate Bench\nstart\n",
                     o->seed, o->seed, o->players, o->turns, size_lines);

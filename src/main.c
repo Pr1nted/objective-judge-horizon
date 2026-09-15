@@ -693,6 +693,7 @@ static int cmd_net(int argc, char **argv) {
         if (f) {
             char size_lines[160] = "";
             if (o.map_size) snprintf(size_lines, sizeof size_lines, "set mapsize FULLSIZE\nset size %s\n", o.map_size);
+            if (o.players > 50) strncat(size_lines, "set nationset all\n", sizeof size_lines - strlen(size_lines) - 1);
             fprintf(f, "set gameseed %u\nset mapseed %u\nset timeout -1\nset minplayers 0\nset ec_turns 0\nset aifill %d\n"
                        "set endturn %d\nset autosaves \"\"\n%shard\n", o.seed, o.seed, o.players, o.turns + 1, size_lines);
             fclose(f);
@@ -777,10 +778,11 @@ static int cmd_net(int argc, char **argv) {
     } else if (!o.od_server || !o.od_data) {
         snprintf(error, sizeof error, "needs --od-server and --od-data");
     } else {
-        static char od_env_clients[48];
+        static char od_env_clients[48], od_env_map[4400];
         snprintf(od_env_clients, sizeof od_env_clients, "OD_OJH_NET=%d", clients);
+        snprintf(od_env_map, sizeof od_env_map, "OD_EVAL_MAP=%s", o.od_map ? o.od_map : "");
         const char *server[] = {o.od_server, "--eval-ai", "1", turns_text, seed_text, "2", "--data", o.od_data, NULL};
-        const char *env[] = {"OD_OJH=1", od_env_clients, NULL};
+        const char *env[] = {"OD_OJH=1", od_env_clients, o.od_map ? od_env_map : NULL, NULL};
         plan.mode = OJH_NET_REPORTED;
         plan.server = server;
         plan.server_env = env;

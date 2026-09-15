@@ -182,6 +182,7 @@ static int footprint_freeciv(const ojh_tpm_options *o, ojh_footprint *f, char *e
     if (!s) return fail(error, error_len, "cannot write the Freeciv script");
     char size_lines[160] = "";
     if (o->map_size) snprintf(size_lines, sizeof size_lines, "set mapsize FULLSIZE\nset size %s\n", o->map_size);
+    if (o->players > 50) strncat(size_lines, "set nationset all\n", sizeof size_lines - strlen(size_lines) - 1);
     fprintf(s, "set gameseed %u\nset mapseed %u\nset timeout -1\nset minplayers 0\nset ec_turns 0\nset aifill %d\n"
                "set endturn %d\nset saveturns 1\nset autosaves \"TURN|GAMEOVER\"\nset savename \"ojh\"\n%shard\n"
                "create Bench\nstart\n",

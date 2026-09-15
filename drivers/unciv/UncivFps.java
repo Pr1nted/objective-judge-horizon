@@ -2,6 +2,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
+import com.unciv.ui.screens.LanguagePickerScreen;
 import com.unciv.UncivGame;
 import com.unciv.app.desktop.DesktopDisplay;
 import com.unciv.app.desktop.DesktopFont;
@@ -130,6 +131,14 @@ public final class UncivFps {
         }
 
         @Override
+        public void create() {
+            super.create();
+            Gdx.graphics.setWindowedMode(1600, 900);
+            Gdx.graphics.setContinuousRendering(true);
+            ((Lwjgl3Graphics) Gdx.graphics).getWindow().focusWindow();
+        }
+
+        @Override
         public void render() {
             long now = System.nanoTime();
             if (scene != null && last != 0) {
@@ -137,6 +146,7 @@ public final class UncivFps {
                 else frames.add((now - last) / 1e9);
             }
             last = now;
+            if (!Gdx.graphics.isContinuousRendering()) Gdx.graphics.setContinuousRendering(true);
             super.render();
             try {
                 step(System.nanoTime());
@@ -219,7 +229,7 @@ public final class UncivFps {
                         if (!usable) continue;
                         try {
                             Object screen = c.newInstance(args);
-                            setScreen((BaseScreen) screen);
+                            replaceCurrentScreen(() -> (BaseScreen) screen);
                             return true;
                         } catch (Throwable e) {
                             why = name.substring(name.lastIndexOf('.') + 1) + ": " + e.getCause();
@@ -244,8 +254,14 @@ public final class UncivFps {
         void step(long now) {
             switch (stage) {
                 case 0:
+                    if (getScreen() instanceof LanguagePickerScreen) {
+                        getSettings().setLanguage("English");
+                        getSettings().updateLocaleFromLanguage();
+                        getSettings().setFreshlyCreated(false);
+                        goToMainMenu();
+                        break;
+                    }
                     if (getScreen() instanceof MainMenuScreen) {
-                        ((Lwjgl3Graphics) Gdx.graphics).getWindow().focusWindow();
                         say("OJH renderer " + Gdx.graphics.getGLVersion().getRendererString() + ", OpenGL "
                                 + Gdx.graphics.getGLVersion().getMajorVersion() + "." + Gdx.graphics.getGLVersion().getMinorVersion()
                                 + " via LWJGL3");
@@ -313,12 +329,13 @@ public final class UncivFps {
                 case 7:
                     if (done(now)) {
                         report();
-                        setScreen(loaded);
+                        replaceCurrentScreen(() -> loaded);
                         stage = 8;
                     }
                     break;
                 case 8: {
                     GameInfo clone = started.clone();
+                    clone.setTransients();
                     Thread t = new Thread(() -> {
                         try {
                             Class<?> progress = Class.forName("com.unciv.ui.screens.worldscreen.status.NextTurnProgress");
@@ -328,7 +345,11 @@ public final class UncivFps {
                             lateGame = clone;
                             turnsDone = true;
                         } catch (Throwable e) {
-                            failure = "playing turns failed: " + e;
+                            Throwable cause = e.getCause() != null ? e.getCause() : e;
+                            java.io.StringWriter trace = new java.io.StringWriter();
+                            cause.printStackTrace(new java.io.PrintWriter(trace));
+                            System.err.println(trace);
+                            failure = "playing turns failed: " + cause;
                         }
                     });
                     t.setDaemon(true);
@@ -399,6 +420,9 @@ public final class UncivFps {
         config.useVsync(false);
         config.setForegroundFPS(0);
         config.setIdleFPS(10000);
+        config.setPauseWhenLostFocus(false);
+        config.setPauseWhenMinimized(false);
+        config.setAutoIconify(false);
         new Lwjgl3Application(new Game(seconds, turns, civs, size), config);
     }
 }

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 252" width="760" height="252" role="img" aria-label="Highest data per turn per player">
+<title>Highest data per turn per player</title>
+<rect width="760" height="252" fill="#FFFFFF"/>
+<text x="24" y="34" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="18" font-weight="600" fill="#1F2328">Highest data per turn per player</text>
+<text x="24" y="56" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12.5" fill="#57606A">Less is better, best first. Shown for: the highest data per turn divided by players in the game.</text>
+<line x1="172.0" y1="70" x2="172.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
+<text x="172.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">0 B</text>
+<line x1="289.0" y1="70" x2="289.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
+<text x="289.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">1.95 KiB</text>
+<line x1="406.0" y1="70" x2="406.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
+<text x="406.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">3.91 KiB</text>
+<line x1="523.0" y1="70" x2="523.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
+<text x="523.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">5.86 KiB</text>
+<line x1="640.0" y1="70" x2="640.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
+<text x="640.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">7.81 KiB</text>
+<text x="160" y="97" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">Unciv</text>
+<rect x="172" y="81" width="183.3" height="22" rx="3" fill="#0072B2"/>
+<text x="363.3" y="97" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12" fill="#1F2328">3.06 KiB</text>
+<text x="160" y="131" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">Freeciv</text>
+<rect x="172" y="115" width="384.4" height="22" rx="3" fill="#E69F00"/>
+<text x="564.4" y="131" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12" fill="#1F2328">6.42 KiB</text>
+<text x="160" y="165" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">Open Doctrines</text>
+<text x="178" y="165" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12" font-style="italic" fill="#57606A">n/a</text>
+<text x="160" y="199" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">Greater Diplomacy 5</text>
+<text x="178" y="199" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12" font-style="italic" fill="#57606A">n/a</text>
+</svg>

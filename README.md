@@ -17,20 +17,20 @@ program, installed from its own release, and is driven from the outside.
 
 ## Results
 
-**[First results: four games on an Apple M1 Pro, 2026-09-14](docs/results/2026-09-14-apple-m1-pro/README.md)**
-(the [full report](docs/results/2026-09-14-apple-m1-pro/report.md) with graphs, every game's scorecard, and the raw result files).
+**[Matched maps and player counts, Apple M1 Pro, 2026-09-15](docs/results/2026-09-15-matched-maps-apple-m1-pro/README.md)**: the games on the same worlds and player counts, with Greater Diplomacy 5 measured through its own hook.
 
-| Game | OJH score | Score covers |
+| Game | Score on GD5's 1939 (35 players) | Score on Open Doctrines' 1939 (63 players) |
 |---|---|---|
-| Open Doctrines | 2,599 | 96% of the weight |
-| Unciv 4.22.0 | 1,566 | 76% |
-| Freeciv | 1,435 (provisional) | 80% |
-| Greater Diplomacy 5 | 1,039 | 100% |
+| Open Doctrines | 3,653 | 2,656 |
+| Unciv 4.22.0 | 2,084 | 1,994 |
+| Freeciv 3.2.6 | 1,741 (provisional) | 1,598 (provisional) |
+| Greater Diplomacy 5 | 893 | 507 |
 
-Greater Diplomacy 5's turn speed in these first results was timed wrongly and is being rerun through GD5's own
-benchmark hook; see the correction on the results page. Read the caveats there before quoting a number. OJH and its drivers were
-written by the developer of Open Doctrines, and each game runs its own world. FreeOrion
-and FreeCol are not measured yet.
+Open Doctrines' 1939 is a stress test for Greater Diplomacy 5 (a picture 25 times larger than its own maps), and Freeciv's
+turn delivery is an artifact. Read the caveats on the results page before quoting a number.
+
+[First results, 2026-09-14](docs/results/2026-09-14-apple-m1-pro/README.md): every game on its own default world. Greater
+Diplomacy 5's turn speed there was timed wrongly; see the correction on that page. FreeOrion and FreeCol are not measured yet.
 
 ## What is measured
 

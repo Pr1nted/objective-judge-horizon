@@ -1,0 +1,43 @@
+{
+  "ojh_version": "0.1.0",
+  "metric": "fps",
+  "machine": {
+    "os": "macOS 26.3 (25D125)",
+    "model": "MacBookPro18,1",
+    "cpu": "Apple M1 Pro",
+    "logical_cpus": 10,
+    "performance_cpus": 8,
+    "efficiency_cpus": 2,
+    "memory_bytes": 17179869184,
+    "gpu": "Apple M1 Pro",
+    "gpu_cores": "16",
+    "display": "3456 x 2234 Retina",
+    "on_battery": false,
+    "reference": {
+      "workload": "sha256 + sort + mix of a 64 KiB buffer (src/machine.c)",
+      "seconds": 3.0,
+      "cores": 10,
+      "single_core_rounds_per_second": 1724.3,
+      "all_cores_rounds_per_second": 12610.0
+    }
+  },
+  "settings": {
+    "seconds_per_scene": 5.00,
+    "late_game_turns": 20
+  },
+  "result": {
+    "game": "freeciv",
+    "name": "Freeciv",
+    "exit_code": -1,
+    "renderer": null,
+    "resolution": null,
+    "vsync": null,
+    "map_average_fps": null,
+    "one_percent_low_fps": null,
+    "p99_frame_seconds": null,
+    "scenes": {},
+    "not_measured": {},
+    "how": "not measured: Freeciv's client redraws only when something on the map changes, so it has no steady frame rate to time"
+  },
+  "error": "not measured: Freeciv's client redraws only when something on the map changes, so it has no steady frame rate to time"
+}

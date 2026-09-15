@@ -1,0 +1,109 @@
+{
+  "ojh_version": "0.1.0",
+  "metric": "fps",
+  "machine": {
+    "os": "macOS 26.3 (25D125)",
+    "model": "MacBookPro18,1",
+    "cpu": "Apple M1 Pro",
+    "logical_cpus": 10,
+    "performance_cpus": 8,
+    "efficiency_cpus": 2,
+    "memory_bytes": 17179869184,
+    "gpu": "Apple M1 Pro",
+    "gpu_cores": "16",
+    "display": "3456 x 2234 Retina",
+    "on_battery": false,
+    "reference": {
+      "workload": "sha256 + sort + mix of a 64 KiB buffer (src/machine.c)",
+      "seconds": 3.0,
+      "cores": 10,
+      "single_core_rounds_per_second": 1728.7,
+      "all_cores_rounds_per_second": 12890.3
+    }
+  },
+  "settings": {
+    "seconds_per_scene": 5.00,
+    "late_game_turns": 20
+  },
+  "result": {
+    "game": "opendoctrines",
+    "name": "Open Doctrines",
+    "exit_code": 0,
+    "renderer": "raylib 5.5, OpenGL",
+    "resolution": "1600x900",
+    "vsync": "off",
+    "map_average_fps": 620.86,
+    "one_percent_low_fps": 150.35,
+    "p99_frame_seconds": 0.00526,
+    "scenes": {
+      "menu": {
+        "frames": 5942,
+        "seconds": 5.001,
+        "average_fps": 1188.05,
+        "one_percent_low_fps": 280.01,
+        "p50_ms": 0.560,
+        "p95_ms": 2.542,
+        "p99_ms": 3.077
+      },
+      "map-start": {
+        "frames": 1730,
+        "seconds": 5.004,
+        "average_fps": 345.75,
+        "one_percent_low_fps": 150.35,
+        "p50_ms": 2.591,
+        "p95_ms": 4.122,
+        "p99_ms": 5.262
+      },
+      "map-out": {
+        "frames": 1756,
+        "seconds": 5.003,
+        "average_fps": 350.96,
+        "one_percent_low_fps": 165.36,
+        "p50_ms": 2.535,
+        "p95_ms": 3.994,
+        "p99_ms": 5.196
+      },
+      "map-in": {
+        "frames": 3378,
+        "seconds": 5.001,
+        "average_fps": 675.43,
+        "one_percent_low_fps": 231.22,
+        "p50_ms": 0.820,
+        "p95_ms": 2.998,
+        "p99_ms": 3.329
+      },
+      "map-pan": {
+        "frames": 3253,
+        "seconds": 5.001,
+        "average_fps": 650.53,
+        "one_percent_low_fps": 253.54,
+        "p50_ms": 0.851,
+        "p95_ms": 3.045,
+        "p99_ms": 3.368
+      },
+      "panel": {
+        "frames": 2815,
+        "seconds": 5.001,
+        "average_fps": 562.92,
+        "one_percent_low_fps": 253.64,
+        "p50_ms": 1.114,
+        "p95_ms": 3.148,
+        "p99_ms": 3.565
+      },
+      "map-late": {
+        "frames": 3105,
+        "seconds": 5.001,
+        "average_fps": 620.86,
+        "one_percent_low_fps": 203.40,
+        "p50_ms": 0.897,
+        "p95_ms": 3.124,
+        "p99_ms": 3.688
+      }
+    },
+    "not_measured": {
+      "end-turn": "Open Doctrines resolves a turn inside one frame, behind its loading screen"
+    },
+    "how": "Open Doctrines' own --ojh-fps mode: its real window with vsync and the frame cap off, every frame timed for 5.00 s per scene after two seconds of settling, on the <open-doctrines>/data/STDmaps/1939.odmap world; the late-game map comes after 20 turns"
+  },
+  "error": null
+}

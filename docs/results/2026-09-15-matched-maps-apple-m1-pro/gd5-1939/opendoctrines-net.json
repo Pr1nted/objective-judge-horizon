@@ -1,0 +1,63 @@
+{
+  "ojh_version": "0.1.0",
+  "metric": "net",
+  "machine": {
+    "os": "macOS 26.3 (25D125)",
+    "model": "MacBookPro18,1",
+    "cpu": "Apple M1 Pro",
+    "logical_cpus": 10,
+    "performance_cpus": 8,
+    "efficiency_cpus": 2,
+    "memory_bytes": 17179869184,
+    "gpu": "Apple M1 Pro",
+    "gpu_cores": "16",
+    "display": "3456 x 2234 Retina",
+    "on_battery": false,
+    "reference": {
+      "workload": "sha256 + sort + mix of a 64 KiB buffer (src/machine.c)",
+      "seconds": 3.0,
+      "cores": 10,
+      "single_core_rounds_per_second": 1685.3,
+      "all_cores_rounds_per_second": 12492.3
+    }
+  },
+  "settings": {
+    "turns_requested": 20,
+    "seed": 20260914,
+    "players_requested": 8,
+    "clients": 2
+  },
+  "result": {
+    "game": "opendoctrines",
+    "name": "Open Doctrines",
+    "exit_code": 0,
+    "transport": "turn delta the host broadcasts to each client",
+    "clients": 2,
+    "players": null,
+    "turns": 20,
+    "play_seconds": 0.490,
+    "bytes_up": 0,
+    "bytes_down": 200564,
+    "reads_up": 0,
+    "reads_down": 20,
+    "largest_read_bytes": 12362,
+    "before_first_turn_bytes": 0,
+    "after_last_turn_bytes": 0,
+    "busiest_second_bytes": 200564,
+    "nipm_bytes_per_minute": 24554948,
+    "nipm_up_bytes_per_minute": 0,
+    "nipm_down_bytes_per_minute": 24554948,
+    "nipm_per_client_bytes": 12277474,
+    "reads_per_minute": 2448.6,
+    "dpt": {
+      "lowest_bytes": 2510,
+      "median_bytes": 10908,
+      "highest_bytes": 12362,
+      "lowest_turn": 1,
+      "highest_turn": 20
+    },
+    "delivery": null,
+    "how": "Open Doctrines' headless eval with OD_OJH_NET: after every turn it packs the same turn delta its multiplayer host broadcasts (Game::mpResolveTurn, SaveManager::packTurn) and reports its size times 2 clients. Joining needs a signed-in account, so no client is on the wire: the bytes are the host's real payload, turn delivery is n/a, and the few bytes of each client's orders are not counted"
+  },
+  "error": null
+}

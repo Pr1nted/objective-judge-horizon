@@ -1,0 +1,116 @@
+{
+  "ojh_version": "0.1.0",
+  "metric": "fps",
+  "machine": {
+    "os": "macOS 26.3 (25D125)",
+    "model": "MacBookPro18,1",
+    "cpu": "Apple M1 Pro",
+    "logical_cpus": 10,
+    "performance_cpus": 8,
+    "efficiency_cpus": 2,
+    "memory_bytes": 17179869184,
+    "gpu": "Apple M1 Pro",
+    "gpu_cores": "16",
+    "display": "3456 x 2234 Retina",
+    "on_battery": false,
+    "reference": {
+      "workload": "sha256 + sort + mix of a 64 KiB buffer (src/machine.c)",
+      "seconds": 3.0,
+      "cores": 10,
+      "single_core_rounds_per_second": 1727.7,
+      "all_cores_rounds_per_second": 12463.7
+    }
+  },
+  "settings": {
+    "seconds_per_scene": 5.00,
+    "late_game_turns": 20
+  },
+  "result": {
+    "game": "unciv",
+    "name": "Unciv",
+    "exit_code": 0,
+    "renderer": "Apple M1 Pro, OpenGL 2.1 via LWJGL3",
+    "resolution": "1600x900",
+    "vsync": "off",
+    "map_average_fps": 1569.73,
+    "one_percent_low_fps": 248.75,
+    "p99_frame_seconds": 0.00337,
+    "scenes": {
+      "menu": {
+        "frames": 9538,
+        "seconds": 5.001,
+        "average_fps": 1907.33,
+        "one_percent_low_fps": 278.39,
+        "p50_ms": 0.342,
+        "p95_ms": 2.304,
+        "p99_ms": 2.966
+      },
+      "map-start": {
+        "frames": 7348,
+        "seconds": 5.002,
+        "average_fps": 1468.99,
+        "one_percent_low_fps": 265.80,
+        "p50_ms": 0.399,
+        "p95_ms": 2.414,
+        "p99_ms": 2.977
+      },
+      "map-out": {
+        "frames": 8187,
+        "seconds": 5.000,
+        "average_fps": 1637.28,
+        "one_percent_low_fps": 273.95,
+        "p50_ms": 0.374,
+        "p95_ms": 2.185,
+        "p99_ms": 2.891
+      },
+      "map-in": {
+        "frames": 7732,
+        "seconds": 5.000,
+        "average_fps": 1546.25,
+        "one_percent_low_fps": 283.93,
+        "p50_ms": 0.389,
+        "p95_ms": 2.292,
+        "p99_ms": 2.924
+      },
+      "map-pan": {
+        "frames": 7852,
+        "seconds": 5.002,
+        "average_fps": 1569.73,
+        "one_percent_low_fps": 312.47,
+        "p50_ms": 0.373,
+        "p95_ms": 2.273,
+        "p99_ms": 2.845
+      },
+      "panel": {
+        "frames": 6005,
+        "seconds": 5.002,
+        "average_fps": 1200.53,
+        "one_percent_low_fps": 294.41,
+        "p50_ms": 0.481,
+        "p95_ms": 2.557,
+        "p99_ms": 3.067
+      },
+      "end-turn": {
+        "frames": 5391,
+        "seconds": 3.026,
+        "average_fps": 1781.84,
+        "one_percent_low_fps": 248.75,
+        "p50_ms": 0.299,
+        "p95_ms": 2.691,
+        "p99_ms": 3.368
+      },
+      "map-late": {
+        "frames": 8118,
+        "seconds": 5.002,
+        "average_fps": 1623.01,
+        "one_percent_low_fps": 284.21,
+        "p50_ms": 0.369,
+        "p95_ms": 2.134,
+        "p99_ms": 2.863
+      }
+    },
+    "not_measured": {},
+    "how": "OJH's Unciv driver opens Unciv's own desktop window (LWJGL3, vsync off, no frame cap), starts a game and times every rendered frame of each scene for 5.00 s after a warm-up; the late-game map comes after 20 turns"
+  },
+  "error": null
+}

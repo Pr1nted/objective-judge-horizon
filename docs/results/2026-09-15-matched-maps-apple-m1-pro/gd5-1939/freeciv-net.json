@@ -1,0 +1,66 @@
+{
+  "ojh_version": "0.1.0",
+  "metric": "net",
+  "machine": {
+    "os": "macOS 26.3 (25D125)",
+    "model": "MacBookPro18,1",
+    "cpu": "Apple M1 Pro",
+    "logical_cpus": 10,
+    "performance_cpus": 8,
+    "efficiency_cpus": 2,
+    "memory_bytes": 17179869184,
+    "gpu": "Apple M1 Pro",
+    "gpu_cores": "16",
+    "display": "3456 x 2234 Retina",
+    "on_battery": false,
+    "reference": {
+      "workload": "sha256 + sort + mix of a 64 KiB buffer (src/machine.c)",
+      "seconds": 3.0,
+      "cores": 10,
+      "single_core_rounds_per_second": 1695.0,
+      "all_cores_rounds_per_second": 11722.7
+    }
+  },
+  "settings": {
+    "turns_requested": 20,
+    "seed": 20260914,
+    "players_requested": 35,
+    "clients": 2
+  },
+  "result": {
+    "game": "freeciv",
+    "name": "Freeciv",
+    "exit_code": 0,
+    "transport": "Freeciv client/server protocol over TCP",
+    "clients": 2,
+    "players": 35,
+    "turns": 20,
+    "play_seconds": 7.636,
+    "bytes_up": 280,
+    "bytes_down": 4661644,
+    "reads_up": 6,
+    "reads_down": 32947,
+    "largest_read_bytes": 65536,
+    "before_first_turn_bytes": 550033,
+    "after_last_turn_bytes": 105786,
+    "busiest_second_bytes": 904044,
+    "nipm_bytes_per_minute": 31477564,
+    "nipm_up_bytes_per_minute": 0,
+    "nipm_down_bytes_per_minute": 31477564,
+    "nipm_per_client_bytes": 15738782,
+    "reads_per_minute": 243940.8,
+    "dpt": {
+      "lowest_bytes": 175481,
+      "median_bytes": 203809,
+      "highest_bytes": 229954,
+      "lowest_turn": 2,
+      "highest_turn": 19
+    },
+    "delivery": {
+      "median_seconds": 0.00007,
+      "p95_seconds": 0.37968
+    },
+    "how": "freeciv-server with 35 AI players and 2 freeciv-gtk4 clients on this machine, each attached as a global observer, every byte through OJH's loopback relay; a turn ends at the server's End/start-turn log line"
+  },
+  "error": null
+}

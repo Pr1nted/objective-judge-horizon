@@ -1,0 +1,63 @@
+{
+  "ojh_version": "0.1.0",
+  "metric": "net",
+  "machine": {
+    "os": "macOS 26.3 (25D125)",
+    "model": "MacBookPro18,1",
+    "cpu": "Apple M1 Pro",
+    "logical_cpus": 10,
+    "performance_cpus": 8,
+    "efficiency_cpus": 2,
+    "memory_bytes": 17179869184,
+    "gpu": "Apple M1 Pro",
+    "gpu_cores": "16",
+    "display": "3456 x 2234 Retina",
+    "on_battery": false,
+    "reference": {
+      "workload": "sha256 + sort + mix of a 64 KiB buffer (src/machine.c)",
+      "seconds": 3.0,
+      "cores": 10,
+      "single_core_rounds_per_second": 1721.7,
+      "all_cores_rounds_per_second": 12489.0
+    }
+  },
+  "settings": {
+    "turns_requested": 20,
+    "seed": 20260914,
+    "players_requested": 63,
+    "clients": 2
+  },
+  "result": {
+    "game": "unciv",
+    "name": "Unciv",
+    "exit_code": 0,
+    "transport": "whole-game upload after each turn",
+    "clients": 2,
+    "players": 63,
+    "turns": 20,
+    "play_seconds": 2.388,
+    "bytes_up": 1296540,
+    "bytes_down": 1296540,
+    "reads_up": 20,
+    "reads_down": 20,
+    "largest_read_bytes": 82672,
+    "before_first_turn_bytes": 0,
+    "after_last_turn_bytes": 0,
+    "busiest_second_bytes": 1135952,
+    "nipm_bytes_per_minute": 65153446,
+    "nipm_up_bytes_per_minute": 32576723,
+    "nipm_down_bytes_per_minute": 32576723,
+    "nipm_per_client_bytes": 32576723,
+    "reads_per_minute": 1005.0,
+    "dpt": {
+      "lowest_bytes": 91208,
+      "median_bytes": 133880,
+      "highest_bytes": 165344,
+      "lowest_turn": 1,
+      "highest_turn": 20
+    },
+    "delivery": null,
+    "how": "Unciv has no live connection: its multiplayer uploads the whole game after a turn and the other player downloads it. OJH's Unciv driver plays 20 turns with 63 civilizations and reports the size of that compressed game after each one, counted once up and once down; no relay, so turn delivery is n/a"
+  },
+  "error": null
+}

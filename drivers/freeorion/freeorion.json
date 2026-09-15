@@ -1,0 +1,14 @@
+{
+  "ojh_game_spec": 1,
+  "id": "freeorion",
+  "name": "FreeOrion",
+  "version": "0.5.1.2",
+  "license": "GPL-2.0",
+  "homepage": "https://www.freeorion.org",
+  "notes": "Hostless freeoriond quick-start with every empire played by FreeOrion's own AI clients. FREEORION_SERVER is the freeoriond executable and FREEORION_STARS the galaxy size in star systems.",
+  "command": ["./tpm.sh", "--turns", "{turns}", "--players", "{players}", "--seed", "{seed}", "--work", "{work}"],
+  "turns": {"from": "protocol"},
+  "region_kind": "systems",
+  "default_turns": 100,
+  "timeout_seconds": 14400
+}

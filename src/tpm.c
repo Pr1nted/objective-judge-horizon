@@ -268,10 +268,29 @@ int ojh_tpm_parse_spec(const ojh_gamespec *spec, const ojh_line *lines, size_t c
     return t->turns > 0 ? 0 : -1;
 }
 
+int ojh_gd5_tool(const char *gd5_dir, char *out, size_t n) {
+    if (!gd5_dir) return 0;
+    snprintf(out, n, "%s/map_tools/ojh_benchmark.py", gd5_dir);
+    FILE *f = fopen(out, "rb");
+    if (!f) return 0;
+    fclose(f);
+    return 1;
+}
+
 int ojh_tpm_parse(ojh_game game, const ojh_line *lines, size_t count, ojh_tpm *out) {
     reset(game, out);
     switch (game) {
         case OJH_GAME_GD5: {
+            int protocol = 0;
+            for (size_t i = 0; i < count && !protocol; i++) protocol = strncmp(lines[i].text, "OJH turn ", 9) == 0;
+            if (protocol) {
+                int r = parse_opendoctrines(lines, count, out);
+                snprintf(out->how, sizeof out->how,
+                         "Greater Diplomacy 5's own map_tools/ojh_benchmark.py: every turn through turn_manager, AI "
+                         "preparation, resolution and the map refresh, every nation AI, model diplomacy skipped (%d turns)",
+                         out->turns);
+                return r;
+            }
             int r = parse_json_driver(lines, count, "\"total_seconds\"", "\"regions\"", "\"nations_at_start\"",
                                       "provinces", out);
             snprintf(out->how, sizeof out->how,
@@ -355,16 +374,23 @@ int ojh_tpm_run(ojh_game game, const ojh_tpm_options *o, ojh_tpm *out, char *err
         case OJH_GAME_OPENDOCTRINES: {
             if (!o->od_server || !o->od_data) return fail(error, error_len, "needs --od-server and --od-data");
             const char *argv[] = {o->od_server, "--eval-ai", "1", turns, seed, "2", "--data", o->od_data, NULL};
-            const char *env[] = {"OD_OJH=1", NULL};
+            char eval_map[4400];
+            snprintf(eval_map, sizeof eval_map, "OD_EVAL_MAP=%s", o->od_map ? o->od_map : "");
+            const char *env[] = {"OD_OJH=1", o->od_map ? eval_map : NULL, NULL};
             return run_and_parse(game, NULL, argv, env, NULL, timeout, out, error, error_len);
         }
         case OJH_GAME_GD5: {
             if (!o->gd5_python || !o->gd5_dir || !o->drivers_dir) {
                 return fail(error, error_len, "needs --gd5-python, --gd5-dir and --drivers");
             }
-            char driver[4096];
+            char tool[4400], driver[4096];
+            const char *scenario = o->gd5_scenario ? o->gd5_scenario : "scenarios/historical/1939";
+            if (ojh_gd5_tool(o->gd5_dir, tool, sizeof tool)) {
+                const char *argv[] = {o->gd5_python, tool, "--scenario", scenario, "--seed", seed, "turns", "--turns", turns, NULL};
+                return run_and_parse(game, NULL, argv, NULL, NULL, timeout, out, error, error_len);
+            }
             join_path(driver, sizeof driver, o->drivers_dir, "gd5_tpm.py");
-            const char *argv[] = {o->gd5_python, driver, "--gd5", o->gd5_dir, "--turns", turns, NULL};
+            const char *argv[] = {o->gd5_python, driver, "--gd5", o->gd5_dir, "--scenario", scenario, "--turns", turns, NULL};
             return run_and_parse(game, NULL, argv, NULL, NULL, timeout, out, error, error_len);
         }
         case OJH_GAME_FREECIV: {
@@ -378,9 +404,11 @@ int ojh_tpm_run(ojh_game game, const ojh_tpm_options *o, ojh_tpm *out, char *err
             ojh_make_dir(saves);
             FILE *f = fopen(script, "wb");
             if (!f) return fail(error, error_len, "cannot write the Freeciv start-up script");
+            char size_lines[160] = "";
+            if (o->map_size) snprintf(size_lines, sizeof size_lines, "set mapsize FULLSIZE\nset size %s\n", o->map_size);
             fprintf(f, "set gameseed %u\nset mapseed %u\nset timeout -1\nset minplayers 0\nset ec_turns 0\n"
-                       "set aifill %d\nset endturn %d\nset autosaves \"\"\nhard\ncreate Bench\nstart\n",
-                    o->seed, o->seed, o->players, o->turns);
+                       "set aifill %d\nset endturn %d\nset autosaves \"\"\n%shard\ncreate Bench\nstart\n",
+                    o->seed, o->seed, o->players, o->turns, size_lines);
             fclose(f);
             const char *argv[] = {o->freeciv_server, "-e", "-p", "55600", "-s", saves, "-r", script, "-d", "v", NULL};
             const char *env[] = {"LC_ALL=C", "LANG=C", NULL};
@@ -415,7 +443,7 @@ int ojh_tpm_run(ojh_game game, const ojh_tpm_options *o, ojh_tpm *out, char *err
             snprintf(classpath, sizeof classpath, "%s:%s", classes, o->unciv_jar);
 #endif
             const char *argv[] = {o->java, "-Djava.awt.headless=true", "-cp", classpath, "UncivTpm", players, turns,
-                                  "small", NULL};
+                                  o->map_size ? o->map_size : "small", NULL};
             return run_and_parse(game, NULL, argv, NULL, assets, timeout, out, error, error_len);
         }
         default:

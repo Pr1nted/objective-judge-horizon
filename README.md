@@ -27,7 +27,8 @@ program, installed from its own release, and is driven from the outside.
 | Freeciv | 1,435 (provisional) | 80% |
 | Greater Diplomacy 5 | 1,039 | 100% |
 
-Read the caveats on the results page before quoting a number. OJH and its drivers were
+Greater Diplomacy 5's turn speed in these first results was timed wrongly and is being rerun through GD5's own
+benchmark hook; see the correction on the results page. Read the caveats there before quoting a number. OJH and its drivers were
 written by the developer of Open Doctrines, and each game runs its own world. FreeOrion
 and FreeCol are not measured yet.
 
@@ -270,8 +271,24 @@ build/ojh net freeciv --turns 20 --clients 2 --out results/run/freeciv-net.json
 
 ```bash
 build/ojh footprint unciv --unciv-jar Unciv.jar --out results/run/unciv-footprint.json
-``` `build/ojh score results/run/freeciv.json` scores a single result on its
-own.
+```
+
+`build/ojh score results/run/freeciv.json` scores a single result on its own.
+
+### Same maps, same player counts
+
+Each game can be put on a matched world instead of its own default:
+
+- `--od-map FILE`: Open Doctrines plays this `.odmap` (its `OD_EVAL_MAP` hook; `--od-save` may also be a `.odmap` for frame rate).
+- `--gd5-scenario DIR`: Greater Diplomacy 5 loads this scenario or map directory.
+- `--players N --map-size SIZE`: Freeciv (`size`, thousands of tiles) and Unciv (`tiny` to `huge`; players beyond its major civilizations are city-states).
+
+`tools/matched_maps.py` converts maps between Open Doctrines and Greater Diplomacy 5 with [Dragoman](https://github.com/Pr1nted/dragoman). `tools/run-matched.sh` runs two tiers:
+
+- Greater Diplomacy 5's 1939 scenario in both games, with Freeciv and Unciv at 35 players.
+- Open Doctrines' 1939 in both games, with Freeciv and Unciv at 63 players.
+
+When a Greater Diplomacy 5 checkout has `map_tools/ojh_benchmark.py`, OJH measures turns and frames through it. That is GD5's own hook ([pull request #46](https://github.com/GitGetGot415/Greater-Diplomacy-5/pull/46)).
 
 ```bash
 build/ojh relay 37015 127.0.0.1 27015 600 4

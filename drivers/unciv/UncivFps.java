@@ -1,6 +1,7 @@
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
 import com.unciv.UncivGame;
 import com.unciv.app.desktop.DesktopDisplay;
 import com.unciv.app.desktop.DesktopFont;
@@ -70,7 +71,7 @@ public final class UncivFps {
         reported.add(scene);
     }
 
-    static GameInfo newGame(int civs) {
+    static GameInfo newGame(int civs, String size) {
         Ruleset ruleset = RulesetCache.INSTANCE.get(BaseRuleset.Civ_V_GnK.getFullName());
         if (ruleset == null) ruleset = RulesetCache.INSTANCE.getVanillaRuleset();
         ArrayList<Player> players = new ArrayList<>();
@@ -81,16 +82,23 @@ public final class UncivFps {
             players.add(new Player(nation.getName(), human ? PlayerType.AI : PlayerType.Human, ""));
             human = true;
         }
+        int cityStates = Math.max(0, civs - players.size());
         GameParameters parameters = new GameParameters();
         parameters.setBaseRuleset(ruleset.getName());
         parameters.setDifficulty("King");
         parameters.setSpeed("Quick");
         parameters.setNoBarbarians(true);
-        parameters.setNumberOfCityStates(0);
+        parameters.setNumberOfCityStates(cityStates);
         parameters.setShufflePlayerOrder(false);
         parameters.setPlayers(players);
         MapParameters map = new MapParameters();
-        map.setMapSize(MapSize.Companion.getSmall());
+        switch (size) {
+            case "tiny": map.setMapSize(MapSize.Companion.getTiny()); break;
+            case "medium": map.setMapSize(MapSize.Companion.getMedium()); break;
+            case "large": map.setMapSize(MapSize.Companion.getLarge()); break;
+            case "huge": map.setMapSize(MapSize.Companion.getHuge()); break;
+            default: map.setMapSize(MapSize.Companion.getSmall()); break;
+        }
         map.setNoRuins(true);
         return GameStarter.Companion.startNewGame(new GameSetupInfo(parameters, map));
     }
@@ -98,6 +106,8 @@ public final class UncivFps {
     static final class Game extends UncivGame {
         final double seconds;
         final int turns;
+        final int civs;
+        final String size;
         final ArrayList<Double> frames = new ArrayList<>();
         String scene;
         int warm;
@@ -111,10 +121,12 @@ public final class UncivFps {
         volatile String failure;
         GameInfo started;
 
-        Game(double seconds, int turns) {
+        Game(double seconds, int turns, int civs, String size) {
             super(false);
             this.seconds = seconds;
             this.turns = turns;
+            this.civs = civs;
+            this.size = size;
         }
 
         @Override
@@ -233,6 +245,7 @@ public final class UncivFps {
             switch (stage) {
                 case 0:
                     if (getScreen() instanceof MainMenuScreen) {
+                        ((Lwjgl3Graphics) Gdx.graphics).getWindow().focusWindow();
                         say("OJH renderer " + Gdx.graphics.getGLVersion().getRendererString() + ", OpenGL "
                                 + Gdx.graphics.getGLVersion().getMajorVersion() + "." + Gdx.graphics.getGLVersion().getMinorVersion()
                                 + " via LWJGL3");
@@ -245,7 +258,7 @@ public final class UncivFps {
                 case 1:
                     if (done(now)) {
                         report();
-                        started = newGame(8);
+                        started = newGame(civs, size);
                         load(started);
                         stage = 2;
                     }
@@ -359,6 +372,8 @@ public final class UncivFps {
     public static void main(String[] args) {
         double seconds = args.length > 0 ? Double.parseDouble(args[0]) : 5.0;
         int turns = args.length > 1 ? Integer.parseInt(args[1]) : 20;
+        int civs = args.length > 2 ? Integer.parseInt(args[2]) : 8;
+        String size = args.length > 3 ? args[3] : "small";
         Log.INSTANCE.setBackend(new DesktopLogBackend());
         Display.INSTANCE.setPlatform(new DesktopDisplay());
         Fonts.INSTANCE.setFontImplementation(new DesktopFont());
@@ -384,6 +399,6 @@ public final class UncivFps {
         config.useVsync(false);
         config.setForegroundFPS(0);
         config.setIdleFPS(10000);
-        new Lwjgl3Application(new Game(seconds, turns), config);
+        new Lwjgl3Application(new Game(seconds, turns, civs, size), config);
     }
 }

@@ -54,6 +54,7 @@ public final class UncivTpm {
             if (!nation.isMajorCiv()) continue;
             players.add(new Player(nation.getName(), PlayerType.AI, ""));
         }
+        int cityStates = Math.max(0, civs - players.size());
         players.add(new Player("Spectator", PlayerType.Human, ""));
 
         GameParameters parameters = new GameParameters();
@@ -61,7 +62,7 @@ public final class UncivTpm {
         parameters.setDifficulty("King");
         parameters.setSpeed("Quick");
         parameters.setNoBarbarians(true);
-        parameters.setNumberOfCityStates(0);
+        parameters.setNumberOfCityStates(cityStates);
         parameters.setShufflePlayerOrder(false);
         parameters.setPlayers(players);
 

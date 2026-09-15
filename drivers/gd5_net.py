@@ -16,6 +16,7 @@ def host(args):
     os.chdir(gd5)
     sys.path.insert(0, gd5)
     from tests import app_harness
+    app_harness.SCENARIO_PATH = args.scenario
     app_harness.boot()
     game_map = app_harness.boot_map()
     game_map.selection_mode = False
@@ -161,6 +162,7 @@ def main():
     ap = argparse.ArgumentParser(description="OJH network driver for Greater Diplomacy 5: a real-time match through OJH's relay.")
     ap.add_argument("role", choices=["host", "client"])
     ap.add_argument("--gd5", required=True)
+    ap.add_argument("--scenario", default="scenarios/historical/1939")
     ap.add_argument("--port", type=int, default=38475)
     ap.add_argument("--relay-port", type=int, default=0)
     ap.add_argument("--clients", type=int, default=2)

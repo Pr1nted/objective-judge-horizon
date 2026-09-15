@@ -36,7 +36,8 @@ static int usage(void) {
           "  ojh relay <listen> <host> <port> <seconds> [clients]\n"
           "                                         count a netcode's traffic on loopback\n"
           "  ojh tpm <opendoctrines|gd5|freeciv|unciv|your-game.json> [--turns N] [--repeat N] [--seed S] [--players P] [--timeout S]\n"
-          "          [--od-server PATH --od-data DIR] [--gd5-python PATH --gd5-dir DIR]\n"
+          "          [--od-server PATH --od-data DIR [--od-map FILE]] [--gd5-python PATH --gd5-dir DIR [--gd5-scenario DIR]]\n"
+          "          [--map-size SIZE]\n"
           "          [--freeciv-server PATH] [--unciv-jar PATH --java PATH --javac PATH --jar PATH]\n"
           "          [--drivers DIR] [--work DIR] [--out FILE]\n"
           "                                         turns per minute, every player AI\n"
@@ -181,6 +182,9 @@ static int cmd_tpm(int argc, char **argv) {
         else if (strcmp(a, "--od-data") == 0) o.od_data = v;
         else if (strcmp(a, "--gd5-python") == 0) o.gd5_python = v;
         else if (strcmp(a, "--gd5-dir") == 0) o.gd5_dir = v;
+        else if (strcmp(a, "--gd5-scenario") == 0) o.gd5_scenario = v;
+        else if (strcmp(a, "--od-map") == 0) o.od_map = v;
+        else if (strcmp(a, "--map-size") == 0) o.map_size = v;
         else if (strcmp(a, "--freeciv-server") == 0) o.freeciv_server = v;
         else if (strcmp(a, "--unciv-jar") == 0) o.unciv_jar = v;
         else if (strcmp(a, "--java") == 0) o.java = v;
@@ -363,6 +367,9 @@ static int cmd_footprint(int argc, char **argv) {
         else if (strcmp(a, "--od-save") == 0) o.od_save = v;
         else if (strcmp(a, "--gd5-python") == 0) o.gd5_python = v;
         else if (strcmp(a, "--gd5-dir") == 0) o.gd5_dir = v;
+        else if (strcmp(a, "--gd5-scenario") == 0) o.gd5_scenario = v;
+        else if (strcmp(a, "--od-map") == 0) o.od_map = v;
+        else if (strcmp(a, "--map-size") == 0) o.map_size = v;
         else if (strcmp(a, "--freeciv-server") == 0) o.freeciv_server = v;
         else if (strcmp(a, "--freeciv-prefix") == 0) o.freeciv_prefix = v;
         else if (strcmp(a, "--unciv-jar") == 0) o.unciv_jar = v;
@@ -477,6 +484,9 @@ static int cmd_fps(int argc, char **argv) {
         else if (strcmp(a, "--timeout") == 0) o.timeout_seconds = atof(v);
         else if (strcmp(a, "--gd5-python") == 0) o.gd5_python = v;
         else if (strcmp(a, "--gd5-dir") == 0) o.gd5_dir = v;
+        else if (strcmp(a, "--gd5-scenario") == 0) o.gd5_scenario = v;
+        else if (strcmp(a, "--od-map") == 0) o.od_map = v;
+        else if (strcmp(a, "--map-size") == 0) o.map_size = v;
         else if (strcmp(a, "--unciv-jar") == 0) o.unciv_jar = v;
         else if (strcmp(a, "--java") == 0) o.java = v;
         else if (strcmp(a, "--javac") == 0) o.javac = v;
@@ -594,6 +604,9 @@ static int cmd_net(int argc, char **argv) {
         else if (strcmp(a, "--od-data") == 0) o.od_data = v;
         else if (strcmp(a, "--gd5-python") == 0) o.gd5_python = v;
         else if (strcmp(a, "--gd5-dir") == 0) o.gd5_dir = v;
+        else if (strcmp(a, "--gd5-scenario") == 0) o.gd5_scenario = v;
+        else if (strcmp(a, "--od-map") == 0) o.od_map = v;
+        else if (strcmp(a, "--map-size") == 0) o.map_size = v;
         else if (strcmp(a, "--freeciv-server") == 0) o.freeciv_server = v;
         else if (strcmp(a, "--freeciv-client") == 0) freeciv_client = v;
         else if (strcmp(a, "--unciv-jar") == 0) o.unciv_jar = v;
@@ -678,8 +691,10 @@ static int cmd_net(int argc, char **argv) {
         ojh_make_dir(saves);
         FILE *f = fopen(script, "wb");
         if (f) {
+            char size_lines[160] = "";
+            if (o.map_size) snprintf(size_lines, sizeof size_lines, "set mapsize FULLSIZE\nset size %s\n", o.map_size);
             fprintf(f, "set gameseed %u\nset mapseed %u\nset timeout -1\nset minplayers 0\nset ec_turns 0\nset aifill %d\n"
-                       "set endturn %d\nset autosaves \"\"\nhard\n", o.seed, o.seed, o.players, o.turns + 1);
+                       "set endturn %d\nset autosaves \"\"\n%shard\n", o.seed, o.seed, o.players, o.turns + 1, size_lines);
             fclose(f);
         }
         snprintf(port_text, sizeof port_text, "%u", (unsigned)plan.server_port);
@@ -721,9 +736,10 @@ static int cmd_net(int argc, char **argv) {
             snprintf(invite, sizeof invite, "%s/gd5-invite.txt", o.work_dir);
             remove(invite);
             snprintf(port_text, sizeof port_text, "%u", (unsigned)plan.server_port);
-            const char *server[] = {o.gd5_python, driver, "host", "--gd5", o.gd5_dir, "--port", port_text, "--relay-port",
-                                    "{relay_port}", "--clients", clients_text, "--turns", turns_text, "--work", o.work_dir,
-                                    NULL};
+            const char *server[] = {o.gd5_python, driver, "host", "--gd5", o.gd5_dir, "--scenario",
+                                    o.gd5_scenario ? o.gd5_scenario : "scenarios/historical/1939", "--port", port_text,
+                                    "--relay-port", "{relay_port}", "--clients", clients_text, "--turns", turns_text,
+                                    "--work", o.work_dir, NULL};
             const char *client[] = {o.gd5_python, driver, "client", "--gd5", o.gd5_dir, "--invite-file", invite, "--name",
                                     "OJH {client}", NULL};
             plan.mode = OJH_NET_RELAY;
@@ -743,7 +759,7 @@ static int cmd_net(int argc, char **argv) {
         char classpath[9000], assets[4400];
         if (ojh_unciv_prepare(&o, classpath, sizeof classpath, assets, sizeof assets, error, sizeof error) == 0) {
             const char *server[] = {o.java, "-Djava.awt.headless=true", "-cp", classpath, "UncivTpm", players_text, turns_text,
-                                    "small", "net", NULL};
+                                    o.map_size ? o.map_size : "small", "net", NULL};
             plan.mode = OJH_NET_REPORTED;
             plan.server = server;
             plan.server_cwd = assets;

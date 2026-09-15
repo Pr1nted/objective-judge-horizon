@@ -129,7 +129,19 @@ int ojh_fps_run(ojh_game game, const ojh_tpm_options *o, double seconds, ojh_fps
             if (!o->gd5_python || !o->gd5_dir || !o->drivers_dir) {
                 return fail(error, error_len, "needs --gd5-python, --gd5-dir and --drivers");
             }
-            char driver[4400];
+            char driver[4400], tool[4400], seed_text[16];
+            const char *scenario = o->gd5_scenario ? o->gd5_scenario : "scenarios/historical/1939";
+            snprintf(seed_text, sizeof seed_text, "%u", o->seed);
+            if (ojh_gd5_tool(o->gd5_dir, tool, sizeof tool)) {
+                const char *argv[] = {o->gd5_python, tool, "--scenario", scenario, "--seed", seed_text, "fps", "--seconds",
+                                      seconds_text, "--late-turns", turns_text, NULL};
+                int status = run_scenes(argv, NULL, NULL, timeout, out, error, error_len);
+                snprintf(out->how, sizeof out->how,
+                         "Greater Diplomacy 5's own map_tools/ojh_benchmark.py fps mode: the real game window brought to the "
+                         "front, no frame cap, every frame of each scene timed for %s s after settling, on %.120s; pygame "
+                         "draws in software; the late-game map comes after %d turns", seconds_text, scenario, o->turns);
+                return status;
+            }
             snprintf(driver, sizeof driver, "%s/gd5_fps.py", o->drivers_dir);
             const char *argv[] = {o->gd5_python, driver, "--gd5", o->gd5_dir, "--seconds", seconds_text, "--turns",
                                   turns_text, NULL};
@@ -142,13 +154,15 @@ int ojh_fps_run(ojh_game game, const ojh_tpm_options *o, double seconds, ojh_fps
             return status;
         }
         case OJH_GAME_UNCIV: {
-            char classpath[9000], assets[4400];
+            char classpath[9000], assets[4400], players_text[16];
+            snprintf(players_text, sizeof players_text, "%d", o->players > 0 ? o->players : 8);
             if (ojh_unciv_prepare(o, classpath, sizeof classpath, assets, sizeof assets, error, error_len) != 0) return -1;
             const char *argv[] = {o->java,
 #ifdef __APPLE__
                                   "-XstartOnFirstThread",
 #endif
-                                  "-cp", classpath, "UncivFps", seconds_text, turns_text, NULL};
+                                  "-cp", classpath, "UncivFps", seconds_text, turns_text, players_text,
+                                  o->map_size ? o->map_size : "small", NULL};
             int status = run_scenes(argv, NULL, assets, timeout, out, error, error_len);
             snprintf(out->how, sizeof out->how,
                      "OJH's Unciv driver opens Unciv's own desktop window (LWJGL3, vsync off, no frame cap), starts a game "

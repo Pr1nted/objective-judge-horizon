@@ -37,6 +37,9 @@ typedef struct {
     const char *od_save;
     const char *od_game;
     const char *freeciv_prefix;
+    const char *gd5_scenario;
+    const char *od_map;
+    const char *map_size;
     int turns;
     unsigned seed;
     int players;
@@ -67,6 +70,7 @@ typedef struct {
 } ojh_tpm;
 
 int ojh_tpm_parse(ojh_game game, const ojh_line *lines, size_t count, ojh_tpm *out);
+int ojh_gd5_tool(const char *gd5_dir, char *out, size_t n);
 
 int ojh_tpm_run(ojh_game game, const ojh_tpm_options *options, ojh_tpm *out, char *error, size_t error_len);
 

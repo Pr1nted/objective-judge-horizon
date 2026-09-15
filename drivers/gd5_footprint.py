@@ -18,6 +18,7 @@ def folder_bytes(path):
 def main():
     ap = argparse.ArgumentParser(description="OJH footprint driver for Greater Diplomacy 5: save size, save time and load time.")
     ap.add_argument("--gd5", required=True, help="the Greater Diplomacy 5 checkout")
+    ap.add_argument("--scenario", default="scenarios/historical/1939")
     ap.add_argument("--turns", type=int, default=10)
     args = ap.parse_args()
 
@@ -25,20 +26,16 @@ def main():
     os.chdir(gd5)
     sys.path.insert(0, gd5)
 
-    from tests import app_harness
-    app_harness.boot()
-    game_map = app_harness.boot_map()
-    game_map.selection_mode = False
-    game_map.force_skip_llm = True
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import gd5_tpm
+    _, _, game_map = gd5_tpm.boot(gd5, args.scenario)
 
     import data.constants as c
     from data.map.save_map import save_map_data
-    from map_logic.turn_processing import turn_manager
 
     async def play():
         for _ in range(args.turns):
-            turn_manager.advance_time(game_map)
-            await turn_manager._resolve_turn_and_refresh(game_map)
+            await gd5_tpm.play_turn(game_map)
 
     asyncio.run(play())
 

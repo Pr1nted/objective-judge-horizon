@@ -1,5 +1,7 @@
 # Results: four strategy games on an Apple M1 Pro (2026-09-14)
 
+> **Correction (2026-09-15): Greater Diplomacy 5's turn speed on this page is wrong.** OJH's driver called `turn_manager.advance_time()`, which starts GD5's AI preparation on a background thread and returns. The driver then timed only resolution and map refresh while preparation ran in parallel, uncounted, and it left one nation under human control. GD5 is being rerun through its own benchmark hook ([GD5 pull request #46](https://github.com/GitGetGot415/Greater-Diplomacy-5/pull/46)), which times every turn through GD5's real turn path. Every game is also being rerun on matched maps and player counts. Treat GD5's turn-speed, CPU and score figures below as superseded until those results are published.
+
 **[Read the report](report.md)**. It ranks the games by OJH score, compares every statistic from best to worst and draws a graph for each. The other files here are what the report was built from.
 
 | Game | OJH score | Score covers |

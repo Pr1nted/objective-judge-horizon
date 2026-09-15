@@ -137,7 +137,8 @@ static int footprint_gd5(const ojh_tpm_options *o, ojh_footprint *f, char *error
     char driver[4400], turns[16];
     join_path(driver, sizeof driver, o->drivers_dir, "gd5_footprint.py");
     snprintf(turns, sizeof turns, "%d", o->turns);
-    const char *argv[] = {o->gd5_python, driver, "--gd5", o->gd5_dir, "--turns", turns, NULL};
+    const char *argv[] = {o->gd5_python, driver, "--gd5", o->gd5_dir, "--scenario",
+                          o->gd5_scenario ? o->gd5_scenario : "scenarios/historical/1939", "--turns", turns, NULL};
     f->exit_code = run_and_read(argv, NULL, NULL, o->timeout_seconds > 0 ? o->timeout_seconds : 1800, f, NULL, error,
                                 error_len);
     snprintf(f->how, sizeof f->how,
@@ -179,10 +180,12 @@ static int footprint_freeciv(const ojh_tpm_options *o, ojh_footprint *f, char *e
     ojh_make_dir(saves);
     FILE *s = fopen(play, "wb");
     if (!s) return fail(error, error_len, "cannot write the Freeciv script");
+    char size_lines[160] = "";
+    if (o->map_size) snprintf(size_lines, sizeof size_lines, "set mapsize FULLSIZE\nset size %s\n", o->map_size);
     fprintf(s, "set gameseed %u\nset mapseed %u\nset timeout -1\nset minplayers 0\nset ec_turns 0\nset aifill %d\n"
-               "set endturn %d\nset saveturns 1\nset autosaves \"TURN|GAMEOVER\"\nset savename \"ojh\"\nhard\n"
+               "set endturn %d\nset saveturns 1\nset autosaves \"TURN|GAMEOVER\"\nset savename \"ojh\"\n%shard\n"
                "create Bench\nstart\n",
-            o->seed, o->seed, o->players, o->turns);
+            o->seed, o->seed, o->players, o->turns, size_lines);
     fclose(s);
     s = fopen(quit, "wb");
     if (!s) return fail(error, error_len, "cannot write the Freeciv script");
@@ -254,8 +257,8 @@ static int footprint_unciv(const ojh_tpm_options *o, ojh_footprint *f, char *err
     add_install(f, o->unciv_jar);
     snprintf(turns, sizeof turns, "%d", o->turns);
     snprintf(players, sizeof players, "%d", o->players);
-    const char *argv[] = {o->java, "-Djava.awt.headless=true", "-cp", classpath, "UncivTpm", players, turns, "small",
-                          "footprint", NULL};
+    const char *argv[] = {o->java, "-Djava.awt.headless=true", "-cp", classpath, "UncivTpm", players, turns,
+                          o->map_size ? o->map_size : "small", "footprint", NULL};
     f->exit_code = run_and_read(argv, NULL, assets, o->timeout_seconds > 0 ? o->timeout_seconds : 1800, f, NULL, error,
                                 error_len);
     snprintf(f->how, sizeof f->how,

@@ -1,18 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 252" width="760" height="252" role="img" aria-label="OJH score">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 320" width="760" height="320" role="img" aria-label="OJH score">
 <title>OJH score</title>
-<rect width="760" height="252" fill="#FFFFFF"/>
+<rect width="760" height="320" fill="#FFFFFF"/>
 <text x="24" y="34" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="18" font-weight="600" fill="#1F2328">OJH score</text>
 <text x="24" y="56" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12.5" fill="#57606A">Score version 2. Each game's score is its own; more is better, best first.</text>
-<line x1="172.0" y1="70" x2="172.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
-<text x="172.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">0</text>
-<line x1="289.0" y1="70" x2="289.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
-<text x="289.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">1,000</text>
-<line x1="406.0" y1="70" x2="406.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
-<text x="406.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">2,000</text>
-<line x1="523.0" y1="70" x2="523.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
-<text x="523.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">3,000</text>
-<line x1="640.0" y1="70" x2="640.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
-<text x="640.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">4,000</text>
+<line x1="172.0" y1="70" x2="172.0" y2="284" stroke="#D8DEE4" stroke-width="1"/>
+<text x="172.0" y="300" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">0</text>
+<line x1="289.0" y1="70" x2="289.0" y2="284" stroke="#D8DEE4" stroke-width="1"/>
+<text x="289.0" y="300" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">1,000</text>
+<line x1="406.0" y1="70" x2="406.0" y2="284" stroke="#D8DEE4" stroke-width="1"/>
+<text x="406.0" y="300" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">2,000</text>
+<line x1="523.0" y1="70" x2="523.0" y2="284" stroke="#D8DEE4" stroke-width="1"/>
+<text x="523.0" y="300" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">3,000</text>
+<line x1="640.0" y1="70" x2="640.0" y2="284" stroke="#D8DEE4" stroke-width="1"/>
+<text x="640.0" y="300" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">4,000</text>
 <text x="160" y="97" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">Open Doctrines</text>
 <rect x="172" y="81" width="427.4" height="22" rx="3" fill="#56B4E9"/>
 <text x="607.4" y="97" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12" fill="#1F2328">3,653 points</text>
@@ -25,4 +25,10 @@
 <text x="160" y="199" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">Greater Diplomacy 5</text>
 <rect x="172" y="183" width="104.4" height="22" rx="3" fill="#CC79A7"/>
 <text x="284.4" y="199" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12" fill="#1F2328">892.6 points</text>
+<text x="160" y="233" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">FreeCol</text>
+<rect x="172" y="217" width="79.4" height="22" rx="3" fill="#B03A48"/>
+<text x="259.4" y="233" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12" fill="#1F2328">678.9 points</text>
+<text x="160" y="267" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">FreeOrion</text>
+<rect x="172" y="251" width="34.6" height="22" rx="3" fill="#8C6D1F"/>
+<text x="214.6" y="267" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12" fill="#1F2328">295.4 points</text>
 </svg>

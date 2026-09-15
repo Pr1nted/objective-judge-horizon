@@ -25,12 +25,14 @@ program, installed from its own release, and is driven from the outside.
 | Unciv 4.22.0 | 2,084 | 1,994 |
 | Freeciv 3.2.6 | 1,741 (provisional) | 1,598 (provisional) |
 | Greater Diplomacy 5 | 893 | 507 |
+| FreeCol 1.2.0 | 679 (turn speed only) | 666 (turn speed only) |
+| FreeOrion 0.5.1.2 | 295 (turn speed only) | rerun pending |
 
 Open Doctrines' 1939 is a stress test for Greater Diplomacy 5 (a picture 25 times larger than its own maps), and Freeciv's
 turn delivery is an artifact. Read the caveats on the results page before quoting a number.
 
 [First results, 2026-09-14](docs/results/2026-09-14-apple-m1-pro/README.md): every game on its own default world. Greater
-Diplomacy 5's turn speed there was timed wrongly; see the correction on that page. FreeOrion and FreeCol are not measured yet.
+Diplomacy 5's turn speed there was timed wrongly; see the correction on that page.
 
 ## What is measured
 

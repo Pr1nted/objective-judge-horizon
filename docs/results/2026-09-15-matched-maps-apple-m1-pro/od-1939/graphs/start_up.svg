@@ -1,18 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 252" width="760" height="252" role="img" aria-label="Start-up">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 286" width="760" height="286" role="img" aria-label="Start-up">
 <title>Start-up</title>
-<rect width="760" height="252" fill="#FFFFFF"/>
+<rect width="760" height="286" fill="#FFFFFF"/>
 <text x="24" y="34" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="18" font-weight="600" fill="#1F2328">Start-up</text>
 <text x="24" y="56" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12.5" fill="#57606A">Less is better, best first. Shown for: from launching the game to its first turn starting, world generation or loading included.</text>
-<line x1="172.0" y1="70" x2="172.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
-<text x="172.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">0.0000 s</text>
-<line x1="289.0" y1="70" x2="289.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
-<text x="289.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">5.000 s</text>
-<line x1="406.0" y1="70" x2="406.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
-<text x="406.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">10.0 s</text>
-<line x1="523.0" y1="70" x2="523.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
-<text x="523.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">15.0 s</text>
-<line x1="640.0" y1="70" x2="640.0" y2="216" stroke="#D8DEE4" stroke-width="1"/>
-<text x="640.0" y="232" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">20.0 s</text>
+<line x1="172.0" y1="70" x2="172.0" y2="250" stroke="#D8DEE4" stroke-width="1"/>
+<text x="172.0" y="266" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">0.0000 s</text>
+<line x1="289.0" y1="70" x2="289.0" y2="250" stroke="#D8DEE4" stroke-width="1"/>
+<text x="289.0" y="266" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">5.000 s</text>
+<line x1="406.0" y1="70" x2="406.0" y2="250" stroke="#D8DEE4" stroke-width="1"/>
+<text x="406.0" y="266" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">10.0 s</text>
+<line x1="523.0" y1="70" x2="523.0" y2="250" stroke="#D8DEE4" stroke-width="1"/>
+<text x="523.0" y="266" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">15.0 s</text>
+<line x1="640.0" y1="70" x2="640.0" y2="250" stroke="#D8DEE4" stroke-width="1"/>
+<text x="640.0" y="266" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="11" fill="#57606A" text-anchor="middle">20.0 s</text>
 <text x="160" y="97" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">Unciv</text>
 <rect x="172" y="81" width="21.0" height="22" rx="3" fill="#0072B2"/>
 <text x="201.0" y="97" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12" fill="#1F2328">0.898 s</text>
@@ -22,7 +22,10 @@
 <text x="160" y="165" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">Open Doctrines</text>
 <rect x="172" y="149" width="24.2" height="22" rx="3" fill="#56B4E9"/>
 <text x="204.2" y="165" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12" fill="#1F2328">1.034 s</text>
-<text x="160" y="199" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">Greater Diplomacy 5</text>
-<rect x="172" y="183" width="388.7" height="22" rx="3" fill="#CC79A7"/>
-<text x="568.7" y="199" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12" fill="#1F2328">16.6 s</text>
+<text x="160" y="199" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">FreeCol</text>
+<rect x="172" y="183" width="34.1" height="22" rx="3" fill="#B03A48"/>
+<text x="214.1" y="199" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12" fill="#1F2328">1.456 s</text>
+<text x="160" y="233" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="13" fill="#1F2328" text-anchor="end">Greater Diplomacy 5</text>
+<rect x="172" y="217" width="388.7" height="22" rx="3" fill="#CC79A7"/>
+<text x="568.7" y="233" font-family="Helvetica Neue,Helvetica,Arial,DejaVu Sans,sans-serif" font-size="12" fill="#1F2328">16.6 s</text>
 </svg>

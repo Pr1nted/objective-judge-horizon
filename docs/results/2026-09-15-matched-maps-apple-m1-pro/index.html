@@ -1,0 +1,1081 @@
+<title>Six Games, One World</title>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&family=Spectral:wght@600&display=swap">
+<style>
+/* The Open Doctrines site's own system: same tokens, same two faces, same
+ * components as packaging/web/site/site.css. The page commits to one look --
+ * a lamplit map table -- and paints its own ground rather than borrowing the
+ * host's, exactly as the site does. */
+:root {
+  --ground:#0C0F16; --raise:#141822; --sunken:#090B11;
+  --ink:#E8E4DA; --muted:#9AA0AE; --faint:#666D7C;
+  --rule:#232936; --rule-firm:#333B4B;
+  --gold:#C9A227; --gold-dim:#8C7320; --sea:#16202E;
+}
+* { box-sizing:border-box; }
+@media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
+body {
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"Source Sans 3", system-ui, -apple-system, sans-serif;
+  font-size:17px; line-height:1.65; -webkit-font-smoothing:antialiased;
+}
+.top { position:sticky; top:0; z-index:10;
+  background:color-mix(in srgb, var(--ground) 88%, transparent);
+  backdrop-filter:blur(10px); border-bottom:1px solid var(--rule); }
+.top-in { max-width:1060px; margin:0 auto; padding:14px 24px;
+  display:flex; align-items:baseline; gap:28px; flex-wrap:wrap; }
+.mark { font-family:Spectral,Georgia,serif; font-weight:600; font-size:19px;
+  color:var(--ink); text-decoration:none; white-space:nowrap; }
+.mark span { color:var(--gold); }
+nav { display:flex; gap:22px; flex-wrap:wrap; margin-left:auto; }
+nav a { font-size:14.5px; color:var(--muted); text-decoration:none;
+  padding-bottom:2px; border-bottom:1px solid transparent; }
+nav a:hover { color:var(--ink); border-bottom-color:var(--gold-dim); }
+:focus-visible { outline:2px solid var(--gold); outline-offset:3px; }
+
+main { max-width:1060px; margin:0 auto; padding:0 24px 96px; }
+.narrow { max-width:680px; }
+h1,h2,h3 { font-family:Spectral,Georgia,serif; font-weight:600; letter-spacing:-.01em; }
+h1 { font-size:clamp(34px,6vw,54px); line-height:1.08; margin:0 0 18px; text-wrap:balance; }
+h2 { font-size:27px; margin:52px 0 14px; }
+h3 { font-size:19px; margin:0 0 8px; }
+p { margin:0 0 16px; }
+a { color:var(--gold); text-underline-offset:3px; }
+.lede { font-size:20px; color:var(--muted); max-width:60ch; }
+.lede strong { color:var(--ink); font-weight:600; }
+.label { font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11px;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--faint); }
+
+.hero { position:relative; padding:76px 0 40px; }
+.hero::before { content:""; position:absolute; inset:-40px -50vw 0; z-index:-1;
+  background: radial-gradient(ellipse 70% 60% at 50% 0%,
+    color-mix(in srgb, var(--sea) 80%, var(--gold) 4%) 0%, transparent 70%), var(--ground); }
+
+.grid { display:grid; gap:18px; grid-template-columns:repeat(auto-fit,minmax(215px,1fr)); margin:26px 0; }
+.card { background:var(--raise); border:1px solid var(--rule); border-radius:4px; padding:20px 20px 18px; }
+.card .big { font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:30px;
+  font-weight:500; color:var(--gold); line-height:1.1; display:block;
+  font-variant-numeric:tabular-nums; }
+.card p { margin:8px 0 0; font-size:14.5px; color:var(--muted); }
+
+.alert { background:color-mix(in srgb, var(--gold) 9%, var(--raise));
+  border-left:2px solid var(--gold-dim); padding:18px 20px;
+  border-radius:0 4px 4px 0; margin:24px 0; max-width:72ch; }
+.alert strong { color:var(--gold); }
+.alert p:last-child { margin-bottom:0; }
+
+/* ── bars: the mobile answer to a twelve-column table ── */
+.chart { margin:26px 0; padding:20px 20px 18px; background:var(--raise);
+  border:1px solid var(--rule); border-radius:4px; }
+.chart figcaption { margin-bottom:16px; }
+.note { font-size:14px; color:var(--faint); margin:4px 0 0; }
+ol.bars { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:11px; }
+li.bar { display:grid; grid-template-columns:1fr auto; grid-template-areas:"n v" "t t";
+  gap:2px 12px; align-items:baseline; }
+.bn { grid-area:n; font-size:15px; color:var(--muted); overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; }
+.bv { grid-area:v; font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:14px;
+  font-variant-numeric:tabular-nums; color:var(--muted); white-space:nowrap; }
+.bt { grid-area:t; display:block; height:9px; background:var(--sunken);
+  border-radius:2px; overflow:hidden; border:1px solid var(--rule); }
+.bf { display:block; height:100%; background:var(--rule-firm); }
+li.bar.od .bn, li.bar.od .bv { color:var(--ink); font-weight:600; }
+li.bar.od .bf { background:var(--gold); }
+
+/* ── detail tables ── */
+.scroller { overflow-x:auto; -webkit-overflow-scrolling:touch; margin:18px 0 8px;
+  border:1px solid var(--rule); border-radius:4px; background:var(--raise); }
+table { border-collapse:collapse; width:100%; font-size:14.5px; }
+caption { text-align:left; padding:14px 16px 0; font-size:14px; color:var(--faint); }
+th { text-align:left; font-weight:600; white-space:nowrap; }
+thead th { font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:11px;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--faint);
+  padding:14px 14px 8px; border-bottom:1px solid var(--rule-firm); vertical-align:bottom; }
+tbody th { padding:9px 14px; color:var(--muted); font-weight:400;
+  border-bottom:1px solid var(--rule); position:sticky; left:0;
+  background:var(--raise); }
+td { padding:9px 14px; border-bottom:1px solid var(--rule); color:var(--muted); white-space:nowrap; }
+td.n { font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums; }
+tbody tr:last-child th, tbody tr:last-child td { border-bottom:0; }
+tr.od th, tr.od td { color:var(--ink); }
+tr.od th { font-weight:600; }
+i.pl { font-style:normal; font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10px; color:var(--faint); margin-left:6px; vertical-align:2px; }
+tr.od i.pl { color:var(--gold-dim); }
+
+/* ── caveats ── */
+details { border-bottom:1px solid var(--rule); }
+details:first-of-type { border-top:1px solid var(--rule); }
+summary { cursor:pointer; padding:15px 0; font-weight:600; font-size:16.5px;
+  list-style:none; display:flex; gap:12px; align-items:baseline; color:var(--ink); }
+summary::-webkit-details-marker { display:none; }
+summary::before { content:"+"; font-family:"IBM Plex Mono",ui-monospace,monospace;
+  color:var(--gold); flex:0 0 auto; }
+details[open] summary::before { content:"\2212"; }
+details p { margin:0 0 16px; padding-left:24px; color:var(--muted);
+  font-size:15.5px; max-width:70ch; }
+details code { font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:.9em; color:var(--ink); }
+
+.facts { border-top:1px solid var(--rule); margin:26px 0 0; max-width:680px; }
+.facts div { display:grid; grid-template-columns:176px 1fr; gap:18px;
+  padding:14px 0; border-bottom:1px solid var(--rule); align-items:baseline; }
+.facts dt { font-size:14px; font-weight:600; color:var(--gold); }
+.facts dd { margin:0; color:var(--muted); font-size:15.5px; }
+
+footer { border-top:1px solid var(--rule); margin-top:70px; background:var(--sunken); }
+footer .top-in { padding:30px 24px 44px; display:block; }
+footer p { font-size:14px; color:var(--faint); max-width:62ch; }
+footer a { color:var(--muted); }
+footer code { font-family:"IBM Plex Mono",ui-monospace,monospace; font-size:.9em; }
+
+@media (max-width:560px) {
+  body { font-size:16px; }
+  main { padding:0 16px 72px; }
+  .top-in { padding:12px 16px; gap:14px; }
+  nav { gap:14px; }
+  .hero { padding:44px 0 28px; }
+  h2 { font-size:23px; margin:40px 0 12px; }
+  .facts div { grid-template-columns:1fr; gap:3px; }
+  .chart { padding:16px 14px 14px; }
+}
+</style>
+<div class="top"><div class="top-in"><a class="mark" href="#top">Objective Judge <span>Horizon</span></a><nav><a href="#rounds">Rounds</a><a href="#detail">Detail</a><a href="#score">Scorecard</a><a href="#caveats">Caveats</a><a href="#method">Method</a></nav></div></div>
+<main id="top">
+<div class="hero narrow">
+<p class="label">Benchmark results &middot; 15 September 2026 &middot; Apple M1 Pro</p>
+<h1>Six games, one world</h1>
+<p class="lede">Every game put on the <strong>same map with the same number of players</strong>, and timed. Open Doctrines resolved <strong>2,373 turns a minute</strong> where the next fastest managed 300.2.</p>
+</div>
+<div class="grid">
+<div class="card"><span class="big">2,373</span><p>turns a minute on GD5&rsquo;s 1939 &mdash; 906 provinces, 37 AI players, and 7.9&times; the next fastest game measured</p></div>
+<div class="card"><span class="big">10.7 KiB</span><p>sent per turn, median. The others ran from 79.9 KiB to 11.5 MiB</p></div>
+<div class="card"><span class="big">83.7 MiB</span><p>peak memory. Only Freeciv held less; four games held a gigabyte or more</p></div>
+<div class="card"><span class="big">2.7 s</span><p>to load a save &mdash; last place, and not close. Unciv does it in 34 ms</p></div>
+</div>
+<div class="alert narrow"><p><strong>Read the caveats before quoting any of this.</strong> The benchmark, its weights and five of the six drivers were written by the developer of one of the contestants. That is <a href="#caveats">stated in full below</a>, along with the three figures that are artifacts of how something is measured rather than results.</p></div>
+<h2 id="rounds">Round one &middot; Greater Diplomacy 5&rsquo;s 1939</h2>
+<p class="lede narrow">906 provinces, 35 to 37 AI players. GD5&rsquo;s own historical scenario, converted for Open Doctrines with Dragoman. Freeciv and Unciv cannot load either map, so they are sized to match.</p>
+<figure class="chart"><figcaption><h3>Turns per minute</h3>
+<p class="note">Higher is better. Bars are logarithmic: the spread reaches 372&times;, and a linear scale would leave five of the six games as invisible slivers. Figures in turns/min.</p>
+</figcaption><ol class="bars">
+<li class="bar od"><span class="bn">Open Doctrines</span><span class="bt"><span class="bf" style="width:100.0%"></span></span><span class="bv">2,373</span></li>
+<li class="bar"><span class="bn">Unciv</span><span class="bt"><span class="bf" style="width:67.2%"></span></span><span class="bv">300.2</span></li>
+<li class="bar"><span class="bn">Greater Diplomacy 5</span><span class="bt"><span class="bf" style="width:44.9%"></span></span><span class="bv">73.98</span></li>
+<li class="bar"><span class="bn">Freeciv</span><span class="bt"><span class="bf" style="width:39.4%"></span></span><span class="bv">52.36</span></li>
+<li class="bar"><span class="bn">FreeCol</span><span class="bt"><span class="bf" style="width:38.3%"></span></span><span class="bv">48.68</span></li>
+<li class="bar"><span class="bn">FreeOrion</span><span class="bt"><span class="bf" style="width:6.0%"></span></span><span class="bv">6.37</span></li>
+</ol></figure>
+<figure class="chart"><figcaption><h3>OJH score</h3>
+<p class="note">Higher is better. Each game&rsquo;s score is built from its own result files against fixed reference levels, so no game&rsquo;s score depends on which others are in the report.</p>
+</figcaption><ol class="bars">
+<li class="bar od"><span class="bn">Open Doctrines</span><span class="bt"><span class="bf" style="width:100.0%"></span></span><span class="bv">3,653</span></li>
+<li class="bar"><span class="bn">Unciv</span><span class="bt"><span class="bf" style="width:79.0%"></span></span><span class="bv">2,084</span></li>
+<li class="bar"><span class="bn">Freeciv</span><span class="bt"><span class="bf" style="width:72.3%"></span></span><span class="bv">1,741 (provisional)</span></li>
+<li class="bar"><span class="bn">Greater Diplomacy 5</span><span class="bt"><span class="bf" style="width:47.4%"></span></span><span class="bv">893</span></li>
+<li class="bar"><span class="bn">FreeCol (version 1.2.0)</span><span class="bt"><span class="bf" style="width:37.1%"></span></span><span class="bv">679</span></li>
+<li class="bar"><span class="bn">FreeOrion (version 0.5.1.2)</span><span class="bt"><span class="bf" style="width:6.0%"></span></span><span class="bv">295</span></li>
+</ol></figure>
+<h2>Round two &middot; Open Doctrines&rsquo; 1939</h2>
+<p class="lede narrow">1,298 land provinces, 63 AI players &mdash; more than the 34 major civilizations Unciv&rsquo;s ruleset has, so 29 of its players are city-states. FreeOrion&rsquo;s run here is not published; see the caveats.</p>
+<figure class="chart"><figcaption><h3>Turns per minute</h3>
+<p class="note">Higher is better. Logarithmic. Figures in turns/min.</p>
+</figcaption><ol class="bars">
+<li class="bar od"><span class="bn">Open Doctrines</span><span class="bt"><span class="bf" style="width:100.0%"></span></span><span class="bv">615.2</span></li>
+<li class="bar"><span class="bn">Unciv</span><span class="bt"><span class="bf" style="width:72.7%"></span></span><span class="bv">143.4</span></li>
+<li class="bar"><span class="bn">FreeCol</span><span class="bt"><span class="bf" style="width:48.8%"></span></span><span class="bv">40.20</span></li>
+<li class="bar"><span class="bn">Freeciv</span><span class="bt"><span class="bf" style="width:41.9%"></span></span><span class="bv">27.85</span></li>
+<li class="bar"><span class="bn">Greater Diplomacy 5</span><span class="bt"><span class="bf" style="width:6.0%"></span></span><span class="bv">4.12</span></li>
+</ol></figure>
+<figure class="chart"><figcaption><h3>OJH score</h3>
+<p class="note">Higher is better. Logarithmic.</p>
+</figcaption><ol class="bars">
+<li class="bar od"><span class="bn">Open Doctrines</span><span class="bt"><span class="bf" style="width:100.0%"></span></span><span class="bv">2,656</span></li>
+<li class="bar"><span class="bn">Unciv</span><span class="bt"><span class="bf" style="width:83.7%"></span></span><span class="bv">1,994</span></li>
+<li class="bar"><span class="bn">Freeciv</span><span class="bt"><span class="bf" style="width:71.2%"></span></span><span class="bv">1,598 (provisional)</span></li>
+<li class="bar"><span class="bn">FreeCol (version 1.2.0)</span><span class="bt"><span class="bf" style="width:21.5%"></span></span><span class="bv">666</span></li>
+<li class="bar"><span class="bn">Greater Diplomacy 5</span><span class="bt"><span class="bf" style="width:6.0%"></span></span><span class="bv">507</span></li>
+</ol></figure>
+<div class="alert"><p><strong>This round is a stress test for Greater Diplomacy 5, not its normal case.</strong> Open Doctrines&rsquo; map keeps its 8192 &times; 4096 picture, about 25 times the pixels of GD5&rsquo;s own 1939. GD5 redraws its map layers from that picture every turn, so its 4.1 turns a minute here mostly measures the picture size. Read its real performance from round one, where it managed 74.</p></div>
+<h2 id="detail">The other three instruments</h2>
+<p class="lede narrow">Turn speed is 67% of the score. These are the rest, from round one, where every game was measured on all four.</p>
+<figure class="chart"><figcaption><h3>Data per turn, median</h3>
+<p class="note">Lower is better, so a long bar is a good result. What the host sends one client for one turn.</p>
+</figcaption><ol class="bars">
+<li class="bar od"><span class="bn">Open Doctrines</span><span class="bt"><span class="bf" style="width:100.0%"></span></span><span class="bv">10.7 KiB</span></li>
+<li class="bar"><span class="bn">Unciv</span><span class="bt"><span class="bf" style="width:73.0%"></span></span><span class="bv">79.9 KiB</span></li>
+<li class="bar"><span class="bn">Freeciv</span><span class="bt"><span class="bf" style="width:60.8%"></span></span><span class="bv">199 KiB</span></li>
+<li class="bar"><span class="bn">Greater Diplomacy 5</span><span class="bt"><span class="bf" style="width:6.0%"></span></span><span class="bv">11.5 MiB</span></li>
+</ol></figure>
+<figure class="chart"><figcaption><h3>Frame rate on the map</h3>
+<p class="note">Higher is better. Each game&rsquo;s own renderer at its own resolution. Figures in fps.</p>
+</figcaption><ol class="bars">
+<li class="bar"><span class="bn">Unciv</span><span class="bt"><span class="bf" style="width:100.0%"></span></span><span class="bv">1,389</span></li>
+<li class="bar od"><span class="bn">Open Doctrines</span><span class="bt"><span class="bf" style="width:72.8%"></span></span><span class="bv">657.0</span></li>
+<li class="bar"><span class="bn">Greater Diplomacy 5</span><span class="bt"><span class="bf" style="width:6.0%"></span></span><span class="bv">104.3</span></li>
+</ol></figure>
+<figure class="chart"><figcaption><h3>1% low frame rate</h3>
+<p class="note">Higher is better. The worst one frame in a hundred &mdash; what a stutter actually feels like. Figures in fps.</p>
+</figcaption><ol class="bars">
+<li class="bar"><span class="bn">Unciv</span><span class="bt"><span class="bf" style="width:100.0%"></span></span><span class="bv">255.0</span></li>
+<li class="bar od"><span class="bn">Open Doctrines</span><span class="bt"><span class="bf" style="width:96.2%"></span></span><span class="bv">218.1</span></li>
+<li class="bar"><span class="bn">Greater Diplomacy 5</span><span class="bt"><span class="bf" style="width:6.0%"></span></span><span class="bv">5.18</span></li>
+</ol></figure>
+<figure class="chart"><figcaption><h3>CPU time per player-turn</h3>
+<p class="note">Lower is better. The processor time one AI player&rsquo;s turn costs, summed over every core. Figures in s.</p>
+</figcaption><ol class="bars">
+<li class="bar"><span class="bn">Freeciv</span><span class="bt"><span class="bf" style="width:48.1%"></span></span><span class="bv">0.0326</span></li>
+<li class="bar od"><span class="bn">Open Doctrines</span><span class="bt"><span class="bf" style="width:100.0%"></span></span><span class="bv">0.0007</span></li>
+<li class="bar"><span class="bn">Greater Diplomacy 5</span><span class="bt"><span class="bf" style="width:52.8%"></span></span><span class="bv">0.0230</span></li>
+<li class="bar"><span class="bn">FreeCol</span><span class="bt"><span class="bf" style="width:34.9%"></span></span><span class="bv">0.0868</span></li>
+<li class="bar"><span class="bn">Unciv</span><span class="bt"><span class="bf" style="width:61.6%"></span></span><span class="bv">0.0120</span></li>
+<li class="bar"><span class="bn">FreeOrion</span><span class="bt"><span class="bf" style="width:6.0%"></span></span><span class="bv">0.737</span></li>
+</ol></figure>
+<figure class="chart"><figcaption><h3>Peak memory</h3>
+<p class="note">Lower is better. Sampled ten times a second across the game and every process it starts.</p>
+</figcaption><ol class="bars">
+<li class="bar"><span class="bn">Freeciv</span><span class="bt"><span class="bf" style="width:100.0%"></span></span><span class="bv">69.6 MiB</span></li>
+<li class="bar od"><span class="bn">Open Doctrines</span><span class="bt"><span class="bf" style="width:95.9%"></span></span><span class="bv">83.7 MiB</span></li>
+<li class="bar"><span class="bn">Greater Diplomacy 5</span><span class="bt"><span class="bf" style="width:39.3%"></span></span><span class="bv">1.01 GiB</span></li>
+<li class="bar"><span class="bn">FreeCol</span><span class="bt"><span class="bf" style="width:36.2%"></span></span><span class="bv">1.16 GiB</span></li>
+<li class="bar"><span class="bn">Unciv</span><span class="bt"><span class="bf" style="width:34.3%"></span></span><span class="bv">1.26 GiB</span></li>
+<li class="bar"><span class="bn">FreeOrion</span><span class="bt"><span class="bf" style="width:6.0%"></span></span><span class="bv">4.44 GiB</span></li>
+</ol></figure>
+<h2>Every number, both rounds</h2>
+<p class="lede narrow">The full tables as <code>ojh report</code> wrote them. Places are the small figures: 1 is the best of the games measured for that statistic. Players, map size and cores are context rather than a ranking. Scroll them sideways.</p>
+<h3>Turn speed &middot; round one</h3>
+<div class="scroller"><table>
+<thead><tr>
+<th>Game</th>
+<th scope="col">Turns per minute</th>
+<th scope="col">Player-turns per minute</th>
+<th scope="col">Region-turns per minute</th>
+<th scope="col">Turns per minute, slowest run</th>
+<th scope="col">Median turn</th>
+<th scope="col">Slow turn (95th percentile)</th>
+<th scope="col">Slowest turn</th>
+<th scope="col">Late-game slowdown</th>
+<th scope="col">Start-up</th>
+<th scope="col">Players</th>
+<th scope="col">Map regions</th>
+</tr></thead><tbody>
+<tr class="od">
+<th scope="row">Open Doctrines</th>
+<td class="n">2,373 turns/min<i class="pl">1</i></td>
+<td class="n">87,795 player-turns/min<i class="pl">1</i></td>
+<td class="n">2,149,791 region-turns/min<i class="pl">1</i></td>
+<td class="n">2,339 turns/min<i class="pl">1</i></td>
+<td class="n">0.0254 s<i class="pl">1</i></td>
+<td class="n">0.0289 s<i class="pl">1</i></td>
+<td class="n">0.0330 s<i class="pl">1</i></td>
+<td class="n">0.93x<i class="pl">2</i></td>
+<td class="n">0.188 s<i class="pl">1</i></td>
+<td class="n">37</td>
+<td class="n">906</td>
+</tr>
+<tr>
+<th scope="row">Unciv</th>
+<td class="n">300.2 turns/min<i class="pl">2</i></td>
+<td class="n">10,508 player-turns/min<i class="pl">2</i></td>
+<td class="n">378,593 region-turns/min<i class="pl">2</i></td>
+<td class="n">281.2 turns/min<i class="pl">2</i></td>
+<td class="n">0.198 s<i class="pl">2</i></td>
+<td class="n">0.333 s<i class="pl">2</i></td>
+<td class="n">0.378 s<i class="pl">2</i></td>
+<td class="n">1.59x<i class="pl">3</i></td>
+<td class="n">0.777 s<i class="pl">3</i></td>
+<td class="n">35</td>
+<td class="n">1,261</td>
+</tr>
+<tr>
+<th scope="row">Greater Diplomacy 5</th>
+<td class="n">73.98 turns/min<i class="pl">3</i></td>
+<td class="n">2,589 player-turns/min<i class="pl">3</i></td>
+<td class="n">67,022 region-turns/min<i class="pl">5</i></td>
+<td class="n">73.77 turns/min<i class="pl">3</i></td>
+<td class="n">0.728 s<i class="pl">3</i></td>
+<td class="n">1.308 s<i class="pl">3</i></td>
+<td class="n">1.545 s<i class="pl">3</i></td>
+<td class="n">0.81x<i class="pl">1</i></td>
+<td class="n">1.196 s<i class="pl">5</i></td>
+<td class="n">35</td>
+<td class="n">906</td>
+</tr>
+<tr>
+<th scope="row">Freeciv</th>
+<td class="n">52.36 turns/min<i class="pl">4</i></td>
+<td class="n">1,832 player-turns/min<i class="pl">4</i></td>
+<td class="n">151,203 region-turns/min<i class="pl">4</i></td>
+<td class="n">52.13 turns/min<i class="pl">4</i></td>
+<td class="n">1.124 s<i class="pl">5</i></td>
+<td class="n">2.219 s<i class="pl">4</i></td>
+<td class="n">4.072 s<i class="pl">4</i></td>
+<td class="n">2.17x<i class="pl">4</i></td>
+<td class="n">0.628 s<i class="pl">2</i></td>
+<td class="n">35</td>
+<td class="n">2,888</td>
+</tr>
+<tr>
+<th scope="row">FreeCol</th>
+<td class="n">48.68 turns/min<i class="pl">5</i></td>
+<td class="n">778.8 player-turns/min<i class="pl">5</i></td>
+<td class="n">194,707 region-turns/min<i class="pl">3</i></td>
+<td class="n">39.80 turns/min<i class="pl">5</i></td>
+<td class="n">0.848 s<i class="pl">4</i></td>
+<td class="n">3.266 s<i class="pl">5</i></td>
+<td class="n">4.353 s<i class="pl">5</i></td>
+<td class="n">13.25x<i class="pl">6</i></td>
+<td class="n">0.981 s<i class="pl">4</i></td>
+<td class="n">16</td>
+<td class="n">4,000</td>
+</tr>
+<tr>
+<th scope="row">FreeOrion</th>
+<td class="n">6.37 turns/min<i class="pl">6</i></td>
+<td class="n">223 player-turns/min<i class="pl">6</i></td>
+<td class="n">5,774 region-turns/min<i class="pl">6</i></td>
+<td class="n">6.37 turns/min<i class="pl">6</i></td>
+<td class="n">8.893 s<i class="pl">6</i></td>
+<td class="n">18.0 s<i class="pl">6</i></td>
+<td class="n">19.4 s<i class="pl">6</i></td>
+<td class="n">4.48x<i class="pl">5</i></td>
+<td class="n">8.284 s<i class="pl">6</i></td>
+<td class="n">35</td>
+<td class="n">906</td>
+</tr>
+</tbody></table></div>
+<h3>Turn speed &middot; round two</h3>
+<div class="scroller"><table>
+<thead><tr>
+<th>Game</th>
+<th scope="col">Turns per minute</th>
+<th scope="col">Player-turns per minute</th>
+<th scope="col">Region-turns per minute</th>
+<th scope="col">Turns per minute, slowest run</th>
+<th scope="col">Median turn</th>
+<th scope="col">Slow turn (95th percentile)</th>
+<th scope="col">Slowest turn</th>
+<th scope="col">Late-game slowdown</th>
+<th scope="col">Start-up</th>
+<th scope="col">Players</th>
+<th scope="col">Map regions</th>
+</tr></thead><tbody>
+<tr class="od">
+<th scope="row">Open Doctrines</th>
+<td class="n">615.2 turns/min<i class="pl">1</i></td>
+<td class="n">38,761 player-turns/min<i class="pl">1</i></td>
+<td class="n">798,593 region-turns/min<i class="pl">1</i></td>
+<td class="n">615.2 turns/min<i class="pl">1</i></td>
+<td class="n">0.0961 s<i class="pl">1</i></td>
+<td class="n">0.119 s<i class="pl">1</i></td>
+<td class="n">0.133 s<i class="pl">1</i></td>
+<td class="n">1.17x<i class="pl">2</i></td>
+<td class="n">1.034 s<i class="pl">3</i></td>
+<td class="n">63</td>
+<td class="n">1,298</td>
+</tr>
+<tr>
+<th scope="row">Unciv</th>
+<td class="n">143.4 turns/min<i class="pl">2</i></td>
+<td class="n">9,031 player-turns/min<i class="pl">2</i></td>
+<td class="n">400,105 region-turns/min<i class="pl">2</i></td>
+<td class="n">143.4 turns/min<i class="pl">2</i></td>
+<td class="n">0.396 s<i class="pl">2</i></td>
+<td class="n">0.744 s<i class="pl">2</i></td>
+<td class="n">1.129 s<i class="pl">2</i></td>
+<td class="n">2.73x<i class="pl">4</i></td>
+<td class="n">0.898 s<i class="pl">1</i></td>
+<td class="n">63</td>
+<td class="n">2,791</td>
+</tr>
+<tr>
+<th scope="row">FreeCol</th>
+<td class="n">40.20 turns/min<i class="pl">3</i></td>
+<td class="n">643.3 player-turns/min<i class="pl">4</i></td>
+<td class="n">231,577 region-turns/min<i class="pl">3</i></td>
+<td class="n">40.20 turns/min<i class="pl">3</i></td>
+<td class="n">1.288 s<i class="pl">3</i></td>
+<td class="n">3.729 s<i class="pl">3</i></td>
+<td class="n">5.283 s<i class="pl">3</i></td>
+<td class="n">11.54x<i class="pl">5</i></td>
+<td class="n">1.456 s<i class="pl">4</i></td>
+<td class="n">16</td>
+<td class="n">5,760</td>
+</tr>
+<tr>
+<th scope="row">Freeciv</th>
+<td class="n">27.85 turns/min<i class="pl">4</i></td>
+<td class="n">1,755 player-turns/min<i class="pl">3</i></td>
+<td class="n">107,845 region-turns/min<i class="pl">4</i></td>
+<td class="n">27.85 turns/min<i class="pl">4</i></td>
+<td class="n">2.052 s<i class="pl">4</i></td>
+<td class="n">5.100 s<i class="pl">4</i></td>
+<td class="n">6.576 s<i class="pl">4</i></td>
+<td class="n">2.21x<i class="pl">3</i></td>
+<td class="n">0.999 s<i class="pl">2</i></td>
+<td class="n">63</td>
+<td class="n">3,872</td>
+</tr>
+<tr>
+<th scope="row">Greater Diplomacy 5</th>
+<td class="n">4.12 turns/min<i class="pl">5</i></td>
+<td class="n">259.8 player-turns/min<i class="pl">5</i></td>
+<td class="n">9,134 region-turns/min<i class="pl">5</i></td>
+<td class="n">4.12 turns/min<i class="pl">5</i></td>
+<td class="n">14.9 s<i class="pl">5</i></td>
+<td class="n">18.7 s<i class="pl">5</i></td>
+<td class="n">20.6 s<i class="pl">5</i></td>
+<td class="n">1.09x<i class="pl">1</i></td>
+<td class="n">16.6 s<i class="pl">5</i></td>
+<td class="n">63</td>
+<td class="n">2,215</td>
+</tr>
+</tbody></table></div>
+<h3>CPU and memory &middot; round one</h3>
+<div class="scroller"><table>
+<thead><tr>
+<th>Game</th>
+<th scope="col">Peak memory</th>
+<th scope="col">Memory per player</th>
+<th scope="col">CPU time per turn</th>
+<th scope="col">CPU time per player-turn</th>
+<th scope="col">Cores in use</th>
+</tr></thead><tbody>
+<tr>
+<th scope="row">Freeciv</th>
+<td class="n">69.6 MiB<i class="pl">1</i></td>
+<td class="n">1.99 MiB<i class="pl">1</i></td>
+<td class="n">1.141 s<i class="pl">4</i></td>
+<td class="n">0.0326 s<i class="pl">4</i></td>
+<td class="n">1 cores</td>
+</tr>
+<tr class="od">
+<th scope="row">Open Doctrines</th>
+<td class="n">83.7 MiB<i class="pl">2</i></td>
+<td class="n">2.26 MiB<i class="pl">2</i></td>
+<td class="n">0.0252 s<i class="pl">1</i></td>
+<td class="n">0.0007 s<i class="pl">1</i></td>
+<td class="n">1 cores</td>
+</tr>
+<tr>
+<th scope="row">Greater Diplomacy 5</th>
+<td class="n">1.01 GiB<i class="pl">3</i></td>
+<td class="n">29.5 MiB<i class="pl">3</i></td>
+<td class="n">0.805 s<i class="pl">3</i></td>
+<td class="n">0.0230 s<i class="pl">3</i></td>
+<td class="n">1 cores</td>
+</tr>
+<tr>
+<th scope="row">FreeCol</th>
+<td class="n">1.16 GiB<i class="pl">4</i></td>
+<td class="n">74.5 MiB<i class="pl">5</i></td>
+<td class="n">1.389 s<i class="pl">5</i></td>
+<td class="n">0.0868 s<i class="pl">5</i></td>
+<td class="n">1.04 cores</td>
+</tr>
+<tr>
+<th scope="row">Unciv</th>
+<td class="n">1.26 GiB<i class="pl">5</i></td>
+<td class="n">36.9 MiB<i class="pl">4</i></td>
+<td class="n">0.418 s<i class="pl">2</i></td>
+<td class="n">0.0120 s<i class="pl">2</i></td>
+<td class="n">1.69 cores</td>
+</tr>
+<tr>
+<th scope="row">FreeOrion</th>
+<td class="n">4.44 GiB<i class="pl">6</i></td>
+<td class="n">130 MiB<i class="pl">6</i></td>
+<td class="n">25.8 s<i class="pl">6</i></td>
+<td class="n">0.737 s<i class="pl">6</i></td>
+<td class="n">1.04 cores</td>
+</tr>
+</tbody></table></div>
+<h3>CPU and memory &middot; round two</h3>
+<div class="scroller"><table>
+<thead><tr>
+<th>Game</th>
+<th scope="col">Peak memory</th>
+<th scope="col">Memory per player</th>
+<th scope="col">CPU time per turn</th>
+<th scope="col">CPU time per player-turn</th>
+<th scope="col">Cores in use</th>
+</tr></thead><tbody>
+<tr>
+<th scope="row">Freeciv</th>
+<td class="n">87.7 MiB<i class="pl">1</i></td>
+<td class="n">1.39 MiB<i class="pl">1</i></td>
+<td class="n">2.147 s<i class="pl">4</i></td>
+<td class="n">0.0341 s<i class="pl">3</i></td>
+<td class="n">1 cores</td>
+</tr>
+<tr class="od">
+<th scope="row">Open Doctrines</th>
+<td class="n">559 MiB<i class="pl">2</i></td>
+<td class="n">8.87 MiB<i class="pl">2</i></td>
+<td class="n">0.0973 s<i class="pl">1</i></td>
+<td class="n">0.0015 s<i class="pl">1</i></td>
+<td class="n">1 cores</td>
+</tr>
+<tr>
+<th scope="row">Unciv</th>
+<td class="n">1.18 GiB<i class="pl">3</i></td>
+<td class="n">19.1 MiB<i class="pl">3</i></td>
+<td class="n">0.739 s<i class="pl">2</i></td>
+<td class="n">0.0117 s<i class="pl">2</i></td>
+<td class="n">1.36 cores</td>
+</tr>
+<tr>
+<th scope="row">FreeCol</th>
+<td class="n">1.24 GiB<i class="pl">4</i></td>
+<td class="n">79.2 MiB<i class="pl">5</i></td>
+<td class="n">1.572 s<i class="pl">3</i></td>
+<td class="n">0.0983 s<i class="pl">4</i></td>
+<td class="n">1.02 cores</td>
+</tr>
+<tr>
+<th scope="row">Greater Diplomacy 5</th>
+<td class="n">3.63 GiB<i class="pl">5</i></td>
+<td class="n">58.9 MiB<i class="pl">4</i></td>
+<td class="n">14.1 s<i class="pl">5</i></td>
+<td class="n">0.224 s<i class="pl">5</i></td>
+<td class="n">0.990 cores</td>
+</tr>
+</tbody></table></div>
+<h3>Frame rate, every scene &middot; round one</h3>
+<div class="scroller"><table>
+<thead><tr>
+<th>Game</th>
+<th scope="col">Frame rate on the map</th>
+<th scope="col">1% low frame rate</th>
+<th scope="col">Slow frame (99th percentile)</th>
+<th scope="col">Main menu</th>
+<th scope="col">Map, start of game</th>
+<th scope="col">Map, zoomed out</th>
+<th scope="col">Map, zoomed in</th>
+<th scope="col">Map, scrolling</th>
+<th scope="col">Heaviest panel</th>
+<th scope="col">Map, late game</th>
+<th scope="col">While a turn resolves</th>
+</tr></thead><tbody>
+<tr>
+<th scope="row">Unciv</th>
+<td class="n">1,389 fps<i class="pl">1</i></td>
+<td class="n">255.0 fps<i class="pl">1</i></td>
+<td class="n">0.0033 s<i class="pl">1</i></td>
+<td class="n">1,976 fps<i class="pl">1</i></td>
+<td class="n">1,389 fps<i class="pl">1</i></td>
+<td class="n">1,367 fps<i class="pl">1</i></td>
+<td class="n">1,433 fps<i class="pl">1</i></td>
+<td class="n">1,341 fps<i class="pl">1</i></td>
+<td class="n">1,170 fps<i class="pl">1</i></td>
+<td class="n">1,548 fps<i class="pl">1</i></td>
+<td class="n">1,775 fps<i class="pl">1</i></td>
+</tr>
+<tr class="od">
+<th scope="row">Open Doctrines</th>
+<td class="n">657.0 fps<i class="pl">2</i></td>
+<td class="n">218.1 fps<i class="pl">2</i></td>
+<td class="n">0.0039 s<i class="pl">2</i></td>
+<td class="n">1,170 fps<i class="pl">2</i></td>
+<td class="n">633.7 fps<i class="pl">2</i></td>
+<td class="n">662.8 fps<i class="pl">2</i></td>
+<td class="n">657.0 fps<i class="pl">2</i></td>
+<td class="n">673.8 fps<i class="pl">2</i></td>
+<td class="n">539.0 fps<i class="pl">2</i></td>
+<td class="n">653.1 fps<i class="pl">2</i></td>
+<td>n/a</td>
+</tr>
+<tr>
+<th scope="row">Greater Diplomacy 5</th>
+<td class="n">104.3 fps<i class="pl">3</i></td>
+<td class="n">5.18 fps<i class="pl">3</i></td>
+<td class="n">0.0574 s<i class="pl">3</i></td>
+<td class="n">297.6 fps<i class="pl">3</i></td>
+<td class="n">105.6 fps<i class="pl">3</i></td>
+<td class="n">106.0 fps<i class="pl">3</i></td>
+<td class="n">77.94 fps<i class="pl">3</i></td>
+<td class="n">104.3 fps<i class="pl">3</i></td>
+<td class="n">107.5 fps<i class="pl">3</i></td>
+<td class="n">100.4 fps<i class="pl">3</i></td>
+<td class="n">62.48 fps<i class="pl">2</i></td>
+</tr>
+<tr>
+<th scope="row">Freeciv</th>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+</tr>
+</tbody></table></div>
+<h3>Frame rate, every scene &middot; round two</h3>
+<div class="scroller"><table>
+<thead><tr>
+<th>Game</th>
+<th scope="col">Frame rate on the map</th>
+<th scope="col">1% low frame rate</th>
+<th scope="col">Slow frame (99th percentile)</th>
+<th scope="col">Main menu</th>
+<th scope="col">Map, start of game</th>
+<th scope="col">Map, zoomed out</th>
+<th scope="col">Map, zoomed in</th>
+<th scope="col">Map, scrolling</th>
+<th scope="col">Heaviest panel</th>
+<th scope="col">Map, late game</th>
+<th scope="col">While a turn resolves</th>
+</tr></thead><tbody>
+<tr>
+<th scope="row">Unciv</th>
+<td class="n">1,570 fps<i class="pl">1</i></td>
+<td class="n">248.8 fps<i class="pl">1</i></td>
+<td class="n">0.0034 s<i class="pl">1</i></td>
+<td class="n">1,907 fps<i class="pl">1</i></td>
+<td class="n">1,469 fps<i class="pl">1</i></td>
+<td class="n">1,637 fps<i class="pl">1</i></td>
+<td class="n">1,546 fps<i class="pl">1</i></td>
+<td class="n">1,570 fps<i class="pl">1</i></td>
+<td class="n">1,201 fps<i class="pl">1</i></td>
+<td class="n">1,623 fps<i class="pl">1</i></td>
+<td class="n">1,782 fps<i class="pl">1</i></td>
+</tr>
+<tr class="od">
+<th scope="row">Open Doctrines</th>
+<td class="n">620.9 fps<i class="pl">2</i></td>
+<td class="n">150.3 fps<i class="pl">2</i></td>
+<td class="n">0.0053 s<i class="pl">2</i></td>
+<td class="n">1,188 fps<i class="pl">2</i></td>
+<td class="n">345.8 fps<i class="pl">2</i></td>
+<td class="n">351.0 fps<i class="pl">2</i></td>
+<td class="n">675.4 fps<i class="pl">2</i></td>
+<td class="n">650.5 fps<i class="pl">2</i></td>
+<td class="n">562.9 fps<i class="pl">2</i></td>
+<td class="n">620.9 fps<i class="pl">2</i></td>
+<td>n/a</td>
+</tr>
+<tr>
+<th scope="row">Greater Diplomacy 5</th>
+<td class="n">101.8 fps<i class="pl">3</i></td>
+<td class="n">6.82 fps<i class="pl">3</i></td>
+<td class="n">0.0328 s<i class="pl">3</i></td>
+<td class="n">296.5 fps<i class="pl">3</i></td>
+<td class="n">101.8 fps<i class="pl">3</i></td>
+<td class="n">102.3 fps<i class="pl">3</i></td>
+<td class="n">130.9 fps<i class="pl">3</i></td>
+<td class="n">101.1 fps<i class="pl">3</i></td>
+<td class="n">106.5 fps<i class="pl">3</i></td>
+<td class="n">97.69 fps<i class="pl">3</i></td>
+<td class="n">109.8 fps<i class="pl">2</i></td>
+</tr>
+<tr>
+<th scope="row">Freeciv</th>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+<td>n/a</td>
+</tr>
+</tbody></table></div>
+<h3>Network &middot; round one</h3>
+<div class="scroller"><table>
+<thead><tr>
+<th>Game</th>
+<th scope="col">Data per turn, highest</th>
+<th scope="col">Data per turn, median</th>
+<th scope="col">Data per turn, lowest</th>
+<th scope="col">Highest data per turn per player</th>
+<th scope="col">Turn delivery time</th>
+<th scope="col">Network information per minute</th>
+<th scope="col">Information per minute per client</th>
+<th scope="col">Busiest second</th>
+</tr></thead><tbody>
+<tr class="od">
+<th scope="row">Open Doctrines</th>
+<td class="n">12.1 KiB<i class="pl">1</i></td>
+<td class="n">10.7 KiB<i class="pl">1</i></td>
+<td class="n">2.45 KiB<i class="pl">1</i></td>
+<td>n/a</td>
+<td>n/a</td>
+<td class="n">23.4 MiB/min</td>
+<td class="n">11.7 MiB/min</td>
+<td class="n">196 KiB<i class="pl">1</i></td>
+</tr>
+<tr>
+<th scope="row">Unciv</th>
+<td class="n">107 KiB<i class="pl">2</i></td>
+<td class="n">79.9 KiB<i class="pl">2</i></td>
+<td class="n">45.9 KiB<i class="pl">2</i></td>
+<td class="n">3.06 KiB<i class="pl">1</i></td>
+<td>n/a</td>
+<td class="n">47.7 MiB/min</td>
+<td class="n">23.9 MiB/min</td>
+<td class="n">854 KiB<i class="pl">2</i></td>
+</tr>
+<tr>
+<th scope="row">Freeciv</th>
+<td class="n">225 KiB<i class="pl">3</i></td>
+<td class="n">199 KiB<i class="pl">3</i></td>
+<td class="n">171 KiB<i class="pl">3</i></td>
+<td class="n">6.42 KiB<i class="pl">2</i></td>
+<td class="n">0.0001 s<i class="pl">1</i></td>
+<td class="n">30.0 MiB/min</td>
+<td class="n">15.0 MiB/min</td>
+<td class="n">883 KiB<i class="pl">3</i></td>
+</tr>
+<tr>
+<th scope="row">Greater Diplomacy 5</th>
+<td class="n">17.9 MiB<i class="pl">4</i></td>
+<td class="n">11.5 MiB<i class="pl">4</i></td>
+<td class="n">9.69 MiB<i class="pl">4</i></td>
+<td>n/a</td>
+<td class="n">0.0839 s<i class="pl">2</i></td>
+<td class="n">1.98 GiB/min</td>
+<td class="n">1012 MiB/min</td>
+<td class="n">40.7 MiB<i class="pl">4</i></td>
+</tr>
+</tbody></table></div>
+<h3>Network &middot; round two</h3>
+<div class="scroller"><table>
+<thead><tr>
+<th>Game</th>
+<th scope="col">Data per turn, highest</th>
+<th scope="col">Data per turn, median</th>
+<th scope="col">Data per turn, lowest</th>
+<th scope="col">Highest data per turn per player</th>
+<th scope="col">Turn delivery time</th>
+<th scope="col">Network information per minute</th>
+<th scope="col">Information per minute per client</th>
+<th scope="col">Busiest second</th>
+</tr></thead><tbody>
+<tr class="od">
+<th scope="row">Open Doctrines</th>
+<td class="n">36.6 KiB<i class="pl">1</i></td>
+<td class="n">35.7 KiB<i class="pl">1</i></td>
+<td class="n">31.0 KiB<i class="pl">1</i></td>
+<td>n/a</td>
+<td>n/a</td>
+<td class="n">25.6 MiB/min</td>
+<td class="n">12.8 MiB/min</td>
+<td class="n">449 KiB<i class="pl">1</i></td>
+</tr>
+<tr>
+<th scope="row">Unciv</th>
+<td class="n">161 KiB<i class="pl">2</i></td>
+<td class="n">131 KiB<i class="pl">2</i></td>
+<td class="n">89.1 KiB<i class="pl">2</i></td>
+<td class="n">2.56 KiB<i class="pl">1</i></td>
+<td>n/a</td>
+<td class="n">62.1 MiB/min</td>
+<td class="n">31.1 MiB/min</td>
+<td class="n">1.08 MiB<i class="pl">3</i></td>
+</tr>
+<tr>
+<th scope="row">Freeciv</th>
+<td class="n">517 KiB<i class="pl">3</i></td>
+<td class="n">445 KiB<i class="pl">3</i></td>
+<td class="n">361 KiB<i class="pl">3</i></td>
+<td class="n">8.21 KiB<i class="pl">2</i></td>
+<td class="n">0.0001 s<i class="pl">1</i></td>
+<td class="n">31.4 MiB/min</td>
+<td class="n">15.7 MiB/min</td>
+<td class="n">819 KiB<i class="pl">2</i></td>
+</tr>
+<tr>
+<th scope="row">Greater Diplomacy 5</th>
+<td class="n">48.6 MiB<i class="pl">4</i></td>
+<td class="n">23.4 MiB<i class="pl">4</i></td>
+<td class="n">22.5 MiB<i class="pl">4</i></td>
+<td>n/a</td>
+<td class="n">0.145 s<i class="pl">2</i></td>
+<td class="n">1.71 GiB/min</td>
+<td class="n">877 MiB/min</td>
+<td class="n">61.3 MiB<i class="pl">4</i></td>
+</tr>
+</tbody></table></div>
+<h3>Footprint</h3>
+<p class="note">From the first round, on each game&rsquo;s own default map, and not rerun since. The one table Open Doctrines comes last in.</p>
+<div class="scroller"><table>
+<thead><tr>
+<th>Game</th>
+<th scope="col">Install size</th>
+<th scope="col">Save file size</th>
+<th scope="col">Save time</th>
+<th scope="col">Load time</th>
+</tr></thead><tbody>
+<tr>
+<th scope="row">Unciv</th>
+<td class="n">54.5 MiB<i class="pl">1</i></td>
+<td class="n">16.6 KiB<i class="pl">1</i></td>
+<td class="n">0.0369 s<i class="pl">1</i></td>
+<td class="n">0.0336 s<i class="pl">1</i></td>
+</tr>
+<tr>
+<th scope="row">Freeciv</th>
+<td class="n">73.0 MiB<i class="pl">2</i></td>
+<td class="n">24.8 KiB<i class="pl">2</i></td>
+<td>n/a</td>
+<td class="n">0.166 s<i class="pl">2</i></td>
+</tr>
+<tr class="od">
+<th scope="row">Open Doctrines</th>
+<td class="n">105 MiB<i class="pl">3</i></td>
+<td class="n">15.4 MiB<i class="pl">4</i></td>
+<td>n/a</td>
+<td class="n">2.702 s<i class="pl">4</i></td>
+</tr>
+<tr>
+<th scope="row">Greater Diplomacy 5</th>
+<td class="n">162 MiB<i class="pl">4</i></td>
+<td class="n">5.65 MiB<i class="pl">3</i></td>
+<td class="n">0.369 s<i class="pl">2</i></td>
+<td class="n">0.545 s<i class="pl">3</i></td>
+</tr>
+</tbody></table></div>
+<h3>The first round, on each game&rsquo;s own map</h3>
+<p class="note">14 September: every game on its own default world, 8 to 37 players on very different maps. Kept because it is where Greater Diplomacy 5&rsquo;s numbers are its real ones, and where footprint was measured.</p>
+<div class="scroller"><table>
+<thead><tr>
+<th>Game</th>
+<th scope="col">OJH score</th>
+<th scope="col">Firsts</th>
+<th scope="col">Lasts</th>
+<th scope="col">Went best</th>
+<th scope="col">Went worst</th>
+</tr></thead><tbody>
+<tr class="od">
+<th scope="row">Open Doctrines</th>
+<td class="n">2,599</td>
+<td class="n">19</td>
+<td class="n">5</td>
+<td>CPU time per player-turn: 0.0012 s, 1st of 4</td>
+<td>Start-up: 11.8 s, 4th of 4</td>
+</tr>
+<tr>
+<th scope="row">Unciv</th>
+<td class="n">1,566</td>
+<td class="n">7</td>
+<td class="n">1</td>
+<td>Save time: 0.0369 s, 1st of 2</td>
+<td>Memory per player: 141 MiB, 4th of 4</td>
+</tr>
+<tr>
+<th scope="row">Freeciv</th>
+<td class="n">1,435 (provisional)</td>
+<td class="n">5</td>
+<td class="n">6</td>
+<td>Peak memory: 58.6 MiB, 1st of 4</td>
+<td>Player-turns per minute: 711.8 player-turns/min, 4th of 4</td>
+</tr>
+<tr>
+<th scope="row">Greater Diplomacy 5</th>
+<td class="n">1,039</td>
+<td class="n">2</td>
+<td class="n">21</td>
+<td>Heaviest panel: 1,625 fps, 1st of 2</td>
+<td>Data per turn, highest: 18.1 MiB, 4th of 4</td>
+</tr>
+</tbody></table></div>
+<h2 id="score">How the score is built</h2>
+<p class="lede narrow">Open Doctrines&rsquo; own scorecard from round one, part by part. Every part is measured against a <em>fixed reference level</em> rather than against the other games, which is what makes a score comparable between reports. Where a figure depends on the processor it was measured on, it is also shown normalised to OJH&rsquo;s reference CPU.</p>
+<div class="scroller"><table>
+<thead><tr>
+<th>Part</th>
+<th scope="col">Measured by</th>
+<th scope="col">Weight</th>
+<th scope="col">Measured</th>
+<th scope="col">On the reference CPU</th>
+<th scope="col">Worth 1,000 points</th>
+<th scope="col">Points</th>
+</tr></thead><tbody>
+<tr>
+<th scope="row">Turn throughput</th>
+<td>ojh tpm</td>
+<td class="n">22%</td>
+<td class="n">87,795 player-turns/min</td>
+<td class="n">51,103 player-turns/min</td>
+<td class="n">2,000 player-turns/min</td>
+<td class="n">4,731</td>
+</tr>
+<tr>
+<th scope="row">World throughput</th>
+<td>ojh tpm</td>
+<td class="n">13%</td>
+<td class="n">2,149,791 region-turns/min</td>
+<td class="n">1,251,334 region-turns/min</td>
+<td class="n">200,000 region-turns/min</td>
+<td class="n">2,859</td>
+</tr>
+<tr>
+<th scope="row">Late-game pace</th>
+<td>ojh tpm</td>
+<td class="n">8%</td>
+<td class="n">1.07</td>
+<td class="n">1.00 (capped)</td>
+<td class="n">0.50</td>
+<td class="n">1,585</td>
+</tr>
+<tr>
+<th scope="row">Steadiness</th>
+<td>ojh tpm</td>
+<td class="n">5%</td>
+<td class="n">0.88</td>
+<td>same</td>
+<td class="n">0.50</td>
+<td class="n">1,464</td>
+</tr>
+<tr>
+<th scope="row">Start-up</th>
+<td>ojh tpm</td>
+<td class="n">5%</td>
+<td class="n">0.188 s</td>
+<td class="n">0.323 s</td>
+<td class="n">10.0 s</td>
+<td class="n">4,998</td>
+</tr>
+<tr>
+<th scope="row">CPU per player-turn</th>
+<td>ojh tpm</td>
+<td class="n">6%</td>
+<td class="n">0.0007 s</td>
+<td class="n">0.0012 s</td>
+<td class="n">0.0100 s</td>
+<td class="n">3,256</td>
+</tr>
+<tr>
+<th scope="row">Memory</th>
+<td>ojh tpm</td>
+<td class="n">8%</td>
+<td class="n">83.7 MiB</td>
+<td>same</td>
+<td class="n">2.00 GiB</td>
+<td class="n">4,670</td>
+</tr>
+<tr>
+<th scope="row">Frame rate</th>
+<td>ojh fps</td>
+<td class="n">12%</td>
+<td class="n">657.0 fps</td>
+<td>same</td>
+<td class="n">60 fps</td>
+<td class="n">3,579</td>
+</tr>
+<tr>
+<th scope="row">Smoothness</th>
+<td>ojh fps</td>
+<td class="n">8%</td>
+<td class="n">218.1 fps</td>
+<td>same</td>
+<td class="n">30 fps</td>
+<td class="n">3,048</td>
+</tr>
+<tr>
+<th scope="row">Data per turn</th>
+<td>ojh net</td>
+<td class="n">9%</td>
+<td class="n">12.1 KiB</td>
+<td>same</td>
+<td class="n">256 KiB</td>
+<td class="n">4,473</td>
+</tr>
+<tr>
+<th scope="row">Turn delivery</th>
+<td>ojh net</td>
+<td class="n">4%</td>
+<td>not measured</td>
+<td>n/a</td>
+<td class="n">0.100 s</td>
+<td>n/a</td>
+</tr>
+</tbody></table></div>
+<p class="note">Open Doctrines scored on 96% of the weight; turn delivery was not reported, because no client sits on the wire. Each game has a scorecard like this one beside the report.</p>
+<h3>Score, coverage and status, every game</h3>
+<div class="scroller"><table>
+<thead><tr>
+<th>Game</th>
+<th scope="col">OJH score</th>
+<th scope="col">Coverage</th>
+<th scope="col">Status</th>
+<th scope="col">Scorecard</th>
+</tr></thead><tbody>
+<tr class="od">
+<th scope="row">Open Doctrines</th>
+<td class="n">3,653</td>
+<td class="n">96%</td>
+<td>final</td>
+<td>score-opendoctrines.md</td>
+</tr>
+<tr>
+<th scope="row">Unciv</th>
+<td class="n">2,084</td>
+<td class="n">96%</td>
+<td>final</td>
+<td>score-unciv.md</td>
+</tr>
+<tr>
+<th scope="row">Freeciv</th>
+<td class="n">1,741</td>
+<td class="n">80%</td>
+<td>provisional</td>
+<td>score-freeciv.md</td>
+</tr>
+<tr>
+<th scope="row">Greater Diplomacy 5</th>
+<td class="n">893</td>
+<td class="n">100%</td>
+<td>final</td>
+<td>score-gd5.md</td>
+</tr>
+<tr>
+<th scope="row">FreeCol (version 1.2.0)</th>
+<td class="n">679</td>
+<td class="n">67%</td>
+<td>final</td>
+<td>score-freecol.md</td>
+</tr>
+<tr>
+<th scope="row">FreeOrion (version 0.5.1.2)</th>
+<td class="n">295</td>
+<td class="n">67%</td>
+<td>final</td>
+<td>score-freeorion.md</td>
+</tr>
+</tbody></table></div>
+<h2 id="caveats">Read these before quoting a number</h2>
+<p class="lede narrow">Tap to open. None of these is a footnote: each one changes what a figure above is allowed to mean.</p>
+<details><summary>Who wrote it</summary><p>OJH, its score weights, and the Freeciv, Unciv, FreeOrion, FreeCol and network drivers were all written by the developer of Open Doctrines. That is a conflict of interest, and it is stated here rather than buried. Greater Diplomacy 5 is measured through a hook offered to its own developer as a pull request; until that is merged, OJH runs GD5 from that branch.</p></details>
+<details><summary>Open Doctrines' network bytes are reported, not captured</summary><p>Joining an Open Doctrines match needs a signed-in account, so no client can sit on the wire. The game reports the turn delta its host broadcasts, times the number of clients. Unciv's figure is its synced save after each turn. Freeciv's and GD5's are bytes actually on the wire through OJH's counting relay. Those are not the same kind of measurement, and the first is the one that flatters Open Doctrines.</p></details>
+<details><summary>Freeciv's 0.1 ms turn delivery is an artifact, not a result</summary><p>Delivery is timed from a turn mark to the end of the first burst of data after it. Freeciv writes its turn log line after it has already sent most of the turn, so the burst OJH sees is a small trailing packet. It earns Freeciv its only first place, and it counts for 4% of Freeciv's score.</p></details>
+<details><summary>Frame rates are each game's own renderer, at its own resolution</summary><p>Open Doctrines and Unciv draw with OpenGL at 1600 &times; 900. Greater Diplomacy 5 draws in software, with pygame, at a fixed 1280 &times; 720. GD5's 1% low comes from the frames drawn while a turn resolves on its background thread; Open Doctrines resolves a turn inside one frame behind a loading screen, so it has no equivalent scene at all. Freeciv has no frame rate to measure: its client redraws only when the map changes.</p></details>
+<details><summary>Two scores are partial, and one is provisional</summary><p>FreeOrion and FreeCol were measured for turn speed only &mdash; 67% of the weight &mdash; because network and frame rate would need their clients driven, which OJH does not do yet. Their scores leave out the parts where the other games gain and lose points. Freeciv's is provisional for the frame-rate reason above.</p></details>
+<details><summary>The second round is a stress test for Greater Diplomacy 5, not its normal case</summary><p>Open Doctrines' 1939 keeps its 8192 &times; 4096 map picture, about 25 times the pixels of GD5's own 1939 at 1881 &times; 698. GD5 redraws its map layers from that picture every turn, so its turn time in that round mostly measures the picture size. GD5's real performance is the first round's.</p></details>
+<details><summary>FreeCol does not play out identically twice</summary><p>Three runs on the same seed on GD5's 1939 spread from 39.8 to 57.2 turns per minute. The median is shown. On Open Doctrines' 1939 it ran once.</p></details>
+<details><summary>FreeOrion is measured exactly as it ships</summary><p>Debug logging included: the server and each AI client write tens of megabytes of logs a minute, and <code>--log-level</code> did not change that. Its run on Open Doctrines' 1939 is not published at all &mdash; the Mac slept for 66 minutes during turns 110&ndash;112, so that run's turns per minute measures the sleep. It will be rerun.</p></details>
+<details><summary>Regions are not the same unit in every game</summary><p>Open Doctrines and Greater Diplomacy 5 count provinces. Freeciv and Unciv count tiles. FreeOrion counts star systems. Region-throughput figures are therefore comparable within a game and indicative between games, which is why turn and player throughput carry more of the score than world throughput does.</p></details>
+<h2 id="method">The machine, and the method</h2>
+<dl class="facts">
+<div><dt>OS</dt><dd>macOS 26.3 (25D125)</dd></div>
+<div><dt>Model</dt><dd>MacBookPro18,1</dd></div>
+<div><dt>CPU</dt><dd>Apple M1 Pro</dd></div>
+<div><dt>Logical CPUs</dt><dd>10 (8 performance, 2 efficiency)</dd></div>
+<div><dt>Memory</dt><dd>16.0 GiB</dd></div>
+<div><dt>GPU</dt><dd>Apple M1 Pro (16 cores)</dd></div>
+<div><dt>Display</dt><dd>3456 x 2234 Retina</dd></div>
+<div><dt>Power</dt><dd>mains</dd></div>
+<div><dt>CPU reference score</dt><dd>1,716 rounds/s on one core, 11,746 on all cores</dd></div>
+</dl>
+<p class="narrow" style="margin-top:22px">The CPU reference score is OJH&rsquo;s own fixed workload, timed on this machine. Divide a result by it to compare across hardware.</p>
+<p class="narrow">250 turns, every player run by the game&rsquo;s own AI. Turn speed is the median of three runs on GD5&rsquo;s 1939 and one run on Open Doctrines&rsquo; 1939. Network runs are 20 turns with two clients. Each frame-rate scene is timed for five seconds after settling, with the late-game map measured after 20 turns. Start-up and world generation are timed separately and are not part of the turns.</p>
+<p class="narrow">Player-turns and region-turns multiply turn speed by the size of the game, so a larger world is not punished for being larger.</p>
+</main>
+<footer><div class="top-in"><p>Generated by <code>tools/report_html.py</code> from the result files in <a href="https://github.com/Pr1nted/objective-judge-horizon">Pr1nted/objective-judge-horizon</a>. Every number on this page is parsed from the Markdown <code>ojh report</code> wrote, so the page and the repository cannot disagree. The benchmark, every driver, the score weights and the raw results are public, and <code>tools/run-matched.sh</code> reproduces the whole round.</p></div></footer>

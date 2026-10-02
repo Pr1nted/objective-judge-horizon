@@ -8,6 +8,14 @@
 #include "footprint.h"
 #include "runner.h"
 
+#ifdef _WIN32
+#  include <io.h>
+#  define OJH_CAN_RUN(p) (_access((p), 0) == 0)
+#else
+#  include <unistd.h>
+#  define OJH_CAN_RUN(p) (access((p), X_OK) == 0)
+#endif
+
 static int fail(char *error, size_t len, const char *message) {
     if (error && len) snprintf(error, len, "%s", message);
     return -1;
@@ -176,12 +184,66 @@ int ojh_fps_run(ojh_game game, const ojh_tpm_options *o, double seconds, ojh_fps
                      "frame rate to time");
             return fail(error, error_len, out->how);
         default: {
-            if (!o->od_game || !o->od_data) return fail(error, error_len, "needs --od-game and --od-data");
+            // ── AN EMPTY PATH IS NOT A MISSING ONE, AND BOTH HAVE TO SAY SO ──
+            //
+            // This checked for a NULL pointer, which is not what the harness
+            // hands it: tools/run-all.sh writes `--od-game "$od_game"` with
+            // od_game=${OD_GAME:-}, so forgetting to export OD_GAME passes an
+            // EMPTY STRING. That is non-null, so it sailed through here and was
+            // handed to execvp, which answered 127.
+            //
+            // The run then recorded "exit 127, 0 scenes" and carried on, and
+            // the report said Frame rate and Smoothness were "not measured" --
+            // 20% of the score weight gone, with nothing anywhere naming a
+            // forgotten environment variable as the reason. The 2026-10-01 run
+            // is scored at 76% coverage because of exactly this.
+            //
+            // So: empty is reported as empty, and a path that cannot be
+            // executed is reported with the path in the message. A measurement
+            // that cannot run has to fail loudly; a silent zero in a score is
+            // worse than no score.
+            if (!o->od_data) return fail(error, error_len, "needs --od-data");
+            if (!o->od_game || !o->od_game[0])
+                return fail(error, error_len,
+                            "needs --od-game: no path was given (is OD_GAME set?)");
+            if (!OJH_CAN_RUN(o->od_game)) {
+                // fail() takes a finished string, not a format.
+                // The hint is a separate string rather than a directive inside
+                // the argument list: a #ifdef between a call's arguments is
+                // undefined behaviour when the call is a macro, and clang says
+                // so (-Wembedded-directive).
+#ifdef __APPLE__
+                static const char *hint =
+                    " (on macOS the game lives inside the bundle: "
+                    "<build>/OpenDoctrines.app/Contents/MacOS/OpenDoctrines)";
+#else
+                static const char *hint = "";
+#endif
+                char why[4600];
+                snprintf(why, sizeof why, "--od-game is not an executable: %.4000s%s",
+                         o->od_game, hint);
+                return fail(error, error_len, why);
+            }
             char save[4400];
             if (o->od_save) snprintf(save, sizeof save, "%s", o->od_save);
             else snprintf(save, sizeof save, "%s/saves/Modern Day.odsv", o->od_data);
+            // ── --od-data HAS TO REACH THE GAME, NOT JUST THIS DRIVER ──
+            //
+            // It was used here only to guess the default save path and was
+            // never passed on, so the child ran against whatever data folder it
+            // found for itself -- the developer's own, with their account and
+            // their saves in it. The visible result was that SIX OF THE SEVEN
+            // SCENES SILENTLY DID NOT RUN: the menu was timed, the map scenes
+            // never started, and the report recorded "1 scenes, map 0.0 fps"
+            // without saying why.
+            //
+            // Same shape as the empty --od-game above: the harness measured
+            // less than it claimed and said nothing.
+            char data_env[4600];
+            snprintf(data_env, sizeof data_env, "OD_DATA_DIR=%.4000s", o->od_data);
+            const char *env[] = {data_env, NULL};
             const char *argv[] = {o->od_game, "--ojh-fps", seconds_text, save, turns_text, NULL};
-            int status = run_scenes(argv, NULL, NULL, timeout, out, error, error_len);
+            int status = run_scenes(argv, env, NULL, timeout, out, error, error_len);
             snprintf(out->how, sizeof out->how,
                      "Open Doctrines' own --ojh-fps mode: its real window with vsync and the frame cap off, every frame "
                      "timed for %s s per scene after two seconds of settling, on the %.200s world; the late-game map comes "

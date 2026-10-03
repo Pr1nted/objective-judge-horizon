@@ -1915,8 +1915,19 @@ static int test_fps(void) {
         fprintf(stderr, "fps: scene lines parsed to %d scenes, map %.2f\n", g.scene_count, ojh_fps_map_average(&g));
         failures++;
     }
+    /* The world the frames were drawn for, and a zero that must not overwrite it. */
+    ojh_fps_parse_line(&g, "OJH players 8");
+    ojh_fps_parse_line(&g, "OJH regions 721 tiles");
+    ojh_fps_parse_line(&g, "OJH view spectator");
+    ojh_fps_parse_line(&g, "OJH players 0");
+    if (g.players != 8 || g.regions != 721 || strcmp(g.region_kind, "tiles") != 0 ||
+        strcmp(g.view, "spectator") != 0) {
+        fprintf(stderr, "fps: the world read as players %d, %ld %s, view '%s'\n", g.players, g.regions,
+                g.region_kind, g.view);
+        failures++;
+    }
     if (failures) return 1;
-    puts("fps: ok (scene lines, missing scenes, the map median, the worst 1% low and the slowest frame read right)");
+    puts("fps: ok (scene lines, missing scenes, the world measured, the map median, the worst 1% low and the slowest frame read right)");
     return 0;
 }
 

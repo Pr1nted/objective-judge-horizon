@@ -30,6 +30,13 @@ typedef struct {
     char renderer[240];
     char resolution[32];
     char vsync[16];
+    /* The world the frames were drawn for. A frame rate without these is not
+       comparable to another one: runs of one build at one configuration have
+       differed 2x here, and nothing recorded what differed. */
+    int players;
+    long regions;
+    char region_kind[16];
+    char view[16];
     ojh_fps_scene scenes[OJH_FPS_MAX_SCENES];
     int scene_count;
     ojh_fps_missing missing[OJH_FPS_MAX_SCENES];

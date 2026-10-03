@@ -60,6 +60,19 @@ void ojh_fps_parse_line(ojh_fps *f, const char *text) {
         if (sscanf(v, " %31s%n", m.name, &used) != 1) return;
         copy_rest(m.reason, sizeof m.reason, v + used);
         if (f->missing_count < OJH_FPS_MAX_SCENES) f->missing[f->missing_count++] = m;
+    } else if ((v = protocol_value(text, "players"))) {
+        int n = 0;
+        if (sscanf(v, " %d", &n) == 1 && n > 0) f->players = n;
+    } else if ((v = protocol_value(text, "regions"))) {
+        /* "OJH regions 721 tiles" -- the count, and what the game calls them. */
+        long n = 0;
+        char kind[16] = "";
+        if (sscanf(v, " %ld %15s", &n, kind) >= 1 && n > 0) {
+            f->regions = n;
+            if (*kind) snprintf(f->region_kind, sizeof f->region_kind, "%s", kind);
+        }
+    } else if ((v = protocol_value(text, "view"))) {
+        copy_rest(f->view, sizeof f->view, v);
     } else if ((v = protocol_value(text, "renderer"))) {
         copy_rest(f->renderer, sizeof f->renderer, v);
     } else if ((v = protocol_value(text, "resolution"))) {
@@ -298,6 +311,15 @@ void ojh_fps_json(ojh_json *w, const ojh_fps *f) {
     else ojh_json_null(w);
     ojh_json_key(w, "vsync");
     if (*f->vsync) ojh_json_string(w, f->vsync);
+    else ojh_json_null(w);
+    ojh_json_key(w, "players");
+    if (f->players > 0) ojh_json_int(w, f->players);
+    else ojh_json_null(w);
+    ojh_json_key(w, *f->region_kind ? f->region_kind : "regions");
+    if (f->regions > 0) ojh_json_int(w, (int)f->regions);
+    else ojh_json_null(w);
+    ojh_json_key(w, "view");
+    if (*f->view) ojh_json_string(w, f->view);
     else ojh_json_null(w);
     ojh_json_key(w, "map_average_fps");
     if (ojh_fps_map_average(f) > 0) ojh_json_double(w, ojh_fps_map_average(f), 2);

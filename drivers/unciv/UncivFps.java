@@ -258,7 +258,11 @@ public final class UncivFps {
                         getSettings().setLanguage("English");
                         getSettings().updateLocaleFromLanguage();
                         getSettings().setFreshlyCreated(false);
-                        goToMainMenu();
+                        // 4.22.1 gave goToMainMenu a callback with a default.
+                        // Java cannot see Kotlin defaults, so the no-argument
+                        // form stopped compiling and this driver stopped
+                        // building against every Unciv after 4.22.0.
+                        goToMainMenu(screen -> kotlin.Unit.INSTANCE);
                         break;
                     }
                     if (getScreen() instanceof MainMenuScreen) {

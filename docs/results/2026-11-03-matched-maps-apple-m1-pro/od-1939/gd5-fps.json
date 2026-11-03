@@ -1,0 +1,119 @@
+{
+  "ojh_version": "0.1.0",
+  "metric": "fps",
+  "machine": {
+    "os": "macOS 26.3 (25D125)",
+    "model": "MacBookPro18,1",
+    "cpu": "Apple M1 Pro",
+    "logical_cpus": 10,
+    "performance_cpus": 8,
+    "efficiency_cpus": 2,
+    "memory_bytes": 17179869184,
+    "gpu": "Apple M1 Pro",
+    "gpu_cores": "16",
+    "display": "3456 x 2234 Retina",
+    "on_battery": false,
+    "reference": {
+      "workload": "sha256 + sort + mix of a 64 KiB buffer (src/machine.c)",
+      "seconds": 3.0,
+      "cores": 10,
+      "single_core_rounds_per_second": 1796.7,
+      "all_cores_rounds_per_second": 14572.0
+    }
+  },
+  "settings": {
+    "seconds_per_scene": 5.00,
+    "late_game_turns": 20
+  },
+  "result": {
+    "game": "gd5",
+    "name": "Greater Diplomacy 5",
+    "exit_code": 0,
+    "renderer": "pygame 2.5.7, SDL 2.32.10, cocoa (software drawing)",
+    "resolution": "1280x720",
+    "vsync": "off",
+    "players": null,
+    "regions": null,
+    "view": null,
+    "map_average_fps": 87.85,
+    "one_percent_low_fps": 0.99,
+    "p99_frame_seconds": 0.02832,
+    "scenes": {
+      "menu": {
+        "frames": 909,
+        "seconds": 5.004,
+        "average_fps": 181.66,
+        "one_percent_low_fps": 86.28,
+        "p50_ms": 5.304,
+        "p95_ms": 6.540,
+        "p99_ms": 7.205
+      },
+      "map-start": {
+        "frames": 479,
+        "seconds": 5.108,
+        "average_fps": 93.78,
+        "one_percent_low_fps": 1.30,
+        "p50_ms": 4.145,
+        "p95_ms": 4.619,
+        "p99_ms": 13.608
+      },
+      "map-out": {
+        "frames": 427,
+        "seconds": 5.919,
+        "average_fps": 72.15,
+        "one_percent_low_fps": 0.99,
+        "p50_ms": 4.116,
+        "p95_ms": 5.081,
+        "p99_ms": 28.318
+      },
+      "map-in": {
+        "frames": 352,
+        "seconds": 5.520,
+        "average_fps": 63.76,
+        "one_percent_low_fps": 0.99,
+        "p50_ms": 4.086,
+        "p95_ms": 4.533,
+        "p99_ms": 19.113
+      },
+      "map-pan": {
+        "frames": 521,
+        "seconds": 5.930,
+        "average_fps": 87.85,
+        "one_percent_low_fps": 1.62,
+        "p50_ms": 5.408,
+        "p95_ms": 5.796,
+        "p99_ms": 19.938
+      },
+      "panel": {
+        "frames": 442,
+        "seconds": 6.173,
+        "average_fps": 71.60,
+        "one_percent_low_fps": 0.99,
+        "p50_ms": 4.668,
+        "p95_ms": 5.216,
+        "p99_ms": 15.068
+      },
+      "end-turn": {
+        "frames": 1843,
+        "seconds": 10.429,
+        "average_fps": 176.71,
+        "one_percent_low_fps": 3.49,
+        "p50_ms": 2.779,
+        "p95_ms": 3.426,
+        "p99_ms": 8.589
+      },
+      "map-late": {
+        "frames": 557,
+        "seconds": 5.442,
+        "average_fps": 102.35,
+        "one_percent_low_fps": 1.63,
+        "p50_ms": 4.179,
+        "p95_ms": 4.650,
+        "p99_ms": 13.275
+      }
+    },
+    "not_measured": {},
+    "how": "Greater Diplomacy 5's own ojh_benchmark.py fps mode: the real game window brought to the front, no frame cap, every frame of each scene timed for 5.00 s after settling, on /Users/vladyavdoshenko/CLionProjects/bench-competitors/gd5-ojh-pr/base_maps/OJH_OD_1939; pygame draws in software; the late-game map comes after 20 turns"
+  },
+  "error": null
+}

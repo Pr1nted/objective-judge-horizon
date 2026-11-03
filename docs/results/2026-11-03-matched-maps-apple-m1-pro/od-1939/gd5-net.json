@@ -1,0 +1,57 @@
+{
+  "ojh_version": "0.1.0",
+  "metric": "net",
+  "machine": {
+    "os": "macOS 26.3 (25D125)",
+    "model": "MacBookPro18,1",
+    "cpu": "Apple M1 Pro",
+    "logical_cpus": 10,
+    "performance_cpus": 8,
+    "efficiency_cpus": 2,
+    "memory_bytes": 17179869184,
+    "gpu": "Apple M1 Pro",
+    "gpu_cores": "16",
+    "display": "3456 x 2234 Retina",
+    "on_battery": false,
+    "reference": {
+      "workload": "sha256 + sort + mix of a 64 KiB buffer (src/machine.c)",
+      "seconds": 3.0,
+      "cores": 10,
+      "single_core_rounds_per_second": 1798.3,
+      "all_cores_rounds_per_second": 14531.0
+    }
+  },
+  "settings": {
+    "turns_requested": 20,
+    "seed": 20260914,
+    "players_requested": 8,
+    "clients": 2
+  },
+  "result": {
+    "game": "gd5",
+    "name": "Greater Diplomacy 5",
+    "exit_code": 1,
+    "transport": "GD5 real-time protocol over TLS",
+    "clients": 0,
+    "players": null,
+    "turns": 0,
+    "play_seconds": 0.000,
+    "bytes_up": 0,
+    "bytes_down": 0,
+    "reads_up": 0,
+    "reads_down": 0,
+    "largest_read_bytes": 0,
+    "before_first_turn_bytes": 0,
+    "after_last_turn_bytes": 0,
+    "busiest_second_bytes": 0,
+    "nipm_bytes_per_minute": 0,
+    "nipm_up_bytes_per_minute": 0,
+    "nipm_down_bytes_per_minute": 0,
+    "nipm_per_client_bytes": null,
+    "reads_per_minute": 0.0,
+    "dpt": null,
+    "delivery": null,
+    "how": "GD5's own real-time server (RealtimeServer and MapRealtimeDriver) hosting the 1939 scenario, with 2 real RealtimeClient guests joining through OJH's loopback relay and submitting every turn; turns end when the server opens the next one"
+  },
+  "error": "the game server never said it was ready"
+}

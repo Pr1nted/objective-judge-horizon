@@ -17,7 +17,22 @@ program, installed from its own release, and is driven from the outside.
 
 ## Results
 
-**[Matched maps and player counts, Apple M1 Pro, 2026-09-15](docs/results/2026-09-15-matched-maps-apple-m1-pro/README.md)**: the games on the same worlds and player counts, with Greater Diplomacy 5 measured through its own hook.
+**[Matched maps and player counts, Apple M1 Pro, 2026-11-03](docs/results/2026-11-03-matched-maps-apple-m1-pro/README.md)**: the newest version of every game, and the first round that measures what each game's turn figure includes instead of assuming it.
+
+| Game | Score on GD5's 1939 (35 players) | Score on Open Doctrines' 1939 (63 players) |
+|---|---|---|
+| Open Doctrines | 3,835 | 2,903 |
+| Unciv 4.22.16 | 2,127 | 2,099 |
+| Freeciv 3.2.6 | 1,738 (provisional) | 1,563 (provisional) |
+| Greater Diplomacy 5 | 1,007 (provisional) | 500 (provisional) |
+| FreeCol 1.2.0 | 726 (turn speed only) | 644 (turn speed only) |
+| FreeOrion 0.5.1.2 | 310 (turn speed only) | 247 (provisional) |
+
+Greater Diplomacy 5's turn included its map refresh and Open Doctrines' excluded its repaint, tilting the ratio between
+them by about a fifth; both are measured on the results page, and GD5's hook has since been fixed. Three of the six runs
+on Open Doctrines' 1939 did not finish. Read the caveats before quoting a number.
+
+[Matched maps, 2026-09-15](docs/results/2026-09-15-matched-maps-apple-m1-pro/README.md): the previous round, with Greater Diplomacy 5 measured through its own hook for the first time.
 
 | Game | Score on GD5's 1939 (35 players) | Score on Open Doctrines' 1939 (63 players) |
 |---|---|---|

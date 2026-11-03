@@ -44,7 +44,7 @@ Measured, rather than argued about:
 | GD5's map refresh, as a share of its turn | 9.5% (12 turns) | its turns per minute read about 10% low |
 | Open Doctrines' map repaint, on top of its turn | 2.69 ms on 21.2 ms, **12.7%** | its turns per minute read about 13% high |
 
-So the two games' columns were tilted in opposite directions, by about a tenth each, and the net was roughly a fifth of the ratio between them: 34.1× as published, 26.6× with both corrected. **GD5's hook has since been fixed** ([GD5 `4c4c847`](https://github.com/GitGetGot415/Greater-Diplomacy-5/pull/46)) — the refresh still runs, because the next turn must start from the state a player would see, but it is timed separately and reported on its own line. The numbers in the tables above were measured *before* that fix, on `f53efce6`.
+So the two games' columns were tilted in opposite directions, by about a tenth each, and the net was roughly a fifth of the ratio between them: 34.1× as published, 26.6× with both corrected. A fix is written and **not yet offered to Greater Diplomacy 5**: the refresh still runs, because the next turn must start from the state a player would see, but it is timed separately and reported on its own line. Until it is merged, the hook in GD5 (added in [pull request #46](https://github.com/GitGetGot415/Greater-Diplomacy-5/pull/46)) still counts the refresh, and the numbers in the tables above were measured with it, on `f53efce6`.
 
 ### What Open Doctrines' figure leaves out
 

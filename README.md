@@ -29,7 +29,7 @@ program, installed from its own release, and is driven from the outside.
 | FreeOrion 0.5.1.2 | 310 (turn speed only) | 247 (provisional) |
 
 Greater Diplomacy 5's turn included its map refresh and Open Doctrines' excluded its repaint, tilting the ratio between
-them by about a fifth; both are measured on the results page, and GD5's hook has since been fixed. Three of the six runs
+them by about a fifth; both are measured on the results page, and a fix for GD5's hook is written but not yet offered. Three of the six runs
 on Open Doctrines' 1939 did not finish. Read the caveats before quoting a number.
 
 [Matched maps, 2026-09-15](docs/results/2026-09-15-matched-maps-apple-m1-pro/README.md): the previous round, with Greater Diplomacy 5 measured through its own hook for the first time.

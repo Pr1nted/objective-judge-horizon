@@ -289,7 +289,8 @@ int ojh_tpm_parse(ojh_game game, const ojh_line *lines, size_t count, ojh_tpm *o
                 int r = parse_opendoctrines(lines, count, out);
                 snprintf(out->how, sizeof out->how,
                          "Greater Diplomacy 5's own ojh_benchmark.py: every turn through turn_manager, AI "
-                         "preparation, resolution and the map refresh, every nation AI, model diplomacy skipped (%d turns)",
+                         "preparation and resolution, every nation AI, model diplomacy skipped; the map refresh runs "
+                         "but is timed separately and left out, as in the other games (%d turns)",
                          out->turns);
                 return r;
             }

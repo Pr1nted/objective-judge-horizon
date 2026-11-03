@@ -158,7 +158,7 @@ int ojh_fps_run(ojh_game game, const ojh_tpm_options *o, double seconds, ojh_fps
                                       seconds_text, "--late-turns", turns_text, NULL};
                 int status = run_scenes(argv, NULL, NULL, timeout, out, error, error_len);
                 snprintf(out->how, sizeof out->how,
-                         "Greater Diplomacy 5's own map_tools/ojh_benchmark.py fps mode: the real game window brought to the "
+                         "Greater Diplomacy 5's own ojh_benchmark.py fps mode: the real game window brought to the "
                          "front, no frame cap, every frame of each scene timed for %s s after settling, on %.120s; pygame "
                          "draws in software; the late-game map comes after %d turns", seconds_text, scenario, o->turns);
                 return status;

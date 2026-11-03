@@ -270,11 +270,13 @@ int ojh_tpm_parse_spec(const ojh_gamespec *spec, const ojh_line *lines, size_t c
 
 int ojh_gd5_tool(const char *gd5_dir, char *out, size_t n) {
     if (!gd5_dir) return 0;
-    snprintf(out, n, "%s/map_tools/ojh_benchmark.py", gd5_dir);
-    FILE *f = fopen(out, "rb");
-    if (!f) return 0;
-    fclose(f);
-    return 1;
+    static const char *const where[] = { "scripts/benchmarks/ojh_benchmark.py", "map_tools/ojh_benchmark.py" };
+    for (size_t i = 0; i < sizeof where / sizeof where[0]; i++) {
+        snprintf(out, n, "%s/%s", gd5_dir, where[i]);
+        FILE *f = fopen(out, "rb");
+        if (f) { fclose(f); return 1; }
+    }
+    return 0;
 }
 
 int ojh_tpm_parse(ojh_game game, const ojh_line *lines, size_t count, ojh_tpm *out) {
@@ -286,7 +288,7 @@ int ojh_tpm_parse(ojh_game game, const ojh_line *lines, size_t count, ojh_tpm *o
             if (protocol) {
                 int r = parse_opendoctrines(lines, count, out);
                 snprintf(out->how, sizeof out->how,
-                         "Greater Diplomacy 5's own map_tools/ojh_benchmark.py: every turn through turn_manager, AI "
+                         "Greater Diplomacy 5's own ojh_benchmark.py: every turn through turn_manager, AI "
                          "preparation, resolution and the map refresh, every nation AI, model diplomacy skipped (%d turns)",
                          out->turns);
                 return r;
